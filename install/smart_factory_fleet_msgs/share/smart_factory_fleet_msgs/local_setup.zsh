@@ -1,0 +1,1 @@
+/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_environment_hooks/local_setup.zsh

@@ -1,0 +1,14 @@
+running develop
+running egg_info
+writing smart_factory_task_server.egg-info/PKG-INFO
+writing dependency_links to smart_factory_task_server.egg-info/dependency_links.txt
+writing entry points to smart_factory_task_server.egg-info/entry_points.txt
+writing requirements to smart_factory_task_server.egg-info/requires.txt
+writing top-level names to smart_factory_task_server.egg-info/top_level.txt
+reading manifest file 'smart_factory_task_server.egg-info/SOURCES.txt'
+writing manifest file 'smart_factory_task_server.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/nick/smart_factory_ws/install/smart_factory_task_server/lib/python3.10/site-packages/smart-factory-task-server.egg-link (link to .)
+
+Installed /home/nick/smart_factory_ws/build/smart_factory_task_server
+running symlink_data

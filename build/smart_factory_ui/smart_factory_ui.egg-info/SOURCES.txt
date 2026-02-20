@@ -1,0 +1,12 @@
+package.xml
+setup.cfg
+setup.py
+resource/smart_factory_ui
+smart_factory_ui/__init__.py
+smart_factory_ui.egg-info/PKG-INFO
+smart_factory_ui.egg-info/SOURCES.txt
+smart_factory_ui.egg-info/dependency_links.txt
+smart_factory_ui.egg-info/entry_points.txt
+smart_factory_ui.egg-info/requires.txt
+smart_factory_ui.egg-info/top_level.txt
+smart_factory_ui.egg-info/zip-safe

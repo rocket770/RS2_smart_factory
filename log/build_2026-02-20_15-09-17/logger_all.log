@@ -1,0 +1,303 @@
+[0.185s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'build', '--symlink-install']
+[0.185s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base=None, log_level=None, verb_name='build', build_base='build', install_base='install', merge_install=False, symlink_install=True, test_result_base=None, continue_on_error=False, executor='parallel', parallel_workers=12, event_handlers=None, ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['.'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=None, packages_skip=None, packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, allow_overriding=[], cmake_args=None, cmake_target=None, cmake_target_skip_unavailable=False, cmake_clean_cache=False, cmake_clean_first=False, cmake_force_configure=False, ament_cmake_args=None, catkin_cmake_args=None, catkin_skip_building_tests=False, mixin_files=None, mixin=None, verb_parser=<colcon_mixin.mixin.mixin_argument.MixinArgumentDecorator object at 0x721678a6d7b0>, verb_extension=<colcon_core.verb.build.BuildVerb object at 0x721678a6d2d0>, main=<bound method BuildVerb.main of <colcon_core.verb.build.BuildVerb object at 0x721678a6d2d0>>, mixin_verb=('build',))
+[0.485s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[0.485s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[0.485s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[0.485s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[0.485s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) discover
+[0.485s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[0.485s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/home/nick/smart_factory_ws'
+[0.485s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ignore', 'ignore_ament_install']
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore_ament_install'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_pkg']
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_pkg'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_meta']
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_meta'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ros']
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ros'
+[0.494s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['cmake', 'python']
+[0.494s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'cmake'
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python'
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['python_setup_py']
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python_setup_py'
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extensions ['ignore', 'ignore_ament_install']
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extension 'ignore'
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(build) ignored
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extensions ['ignore', 'ignore_ament_install']
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extension 'ignore'
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(install) ignored
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extensions ['ignore', 'ignore_ament_install']
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extension 'ignore'
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(log) ignored
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['ignore', 'ignore_ament_install']
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ignore'
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ignore_ament_install'
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['colcon_pkg']
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'colcon_pkg'
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['colcon_meta']
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'colcon_meta'
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['ros']
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ros'
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['cmake', 'python']
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'cmake'
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'python'
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['python_setup_py']
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'python_setup_py'
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_bringup) by extensions ['ignore', 'ignore_ament_install']
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_bringup) by extension 'ignore'
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_bringup) by extension 'ignore_ament_install'
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_bringup) by extensions ['colcon_pkg']
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_bringup) by extension 'colcon_pkg'
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_bringup) by extensions ['colcon_meta']
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_bringup) by extension 'colcon_meta'
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_bringup) by extensions ['ros']
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_bringup) by extension 'ros'
+[0.499s] DEBUG:colcon.colcon_core.package_identification:Package 'src/smart_factory_bringup' with type 'ros.ament_python' and name 'smart_factory_bringup'
+[0.499s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_fleet_msgs) by extensions ['ignore', 'ignore_ament_install']
+[0.499s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_fleet_msgs) by extension 'ignore'
+[0.499s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_fleet_msgs) by extension 'ignore_ament_install'
+[0.499s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_fleet_msgs) by extensions ['colcon_pkg']
+[0.499s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_fleet_msgs) by extension 'colcon_pkg'
+[0.499s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_fleet_msgs) by extensions ['colcon_meta']
+[0.499s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_fleet_msgs) by extension 'colcon_meta'
+[0.499s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_fleet_msgs) by extensions ['ros']
+[0.499s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_fleet_msgs) by extension 'ros'
+[0.500s] DEBUG:colcon.colcon_core.package_identification:Package 'src/smart_factory_fleet_msgs' with type 'ros.ament_cmake' and name 'smart_factory_fleet_msgs'
+[0.500s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_task_server) by extensions ['ignore', 'ignore_ament_install']
+[0.500s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_task_server) by extension 'ignore'
+[0.500s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_task_server) by extension 'ignore_ament_install'
+[0.500s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_task_server) by extensions ['colcon_pkg']
+[0.500s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_task_server) by extension 'colcon_pkg'
+[0.500s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_task_server) by extensions ['colcon_meta']
+[0.500s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_task_server) by extension 'colcon_meta'
+[0.500s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_task_server) by extensions ['ros']
+[0.500s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_task_server) by extension 'ros'
+[0.509s] DEBUG:colcon.colcon_core.package_identification:Package 'src/smart_factory_task_server' with type 'ros.ament_python' and name 'smart_factory_task_server'
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_ui) by extensions ['ignore', 'ignore_ament_install']
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_ui) by extension 'ignore'
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_ui) by extension 'ignore_ament_install'
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_ui) by extensions ['colcon_pkg']
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_ui) by extension 'colcon_pkg'
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_ui) by extensions ['colcon_meta']
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_ui) by extension 'colcon_meta'
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_ui) by extensions ['ros']
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(src/smart_factory_ui) by extension 'ros'
+[0.510s] DEBUG:colcon.colcon_core.package_identification:Package 'src/smart_factory_ui' with type 'ros.ament_python' and name 'smart_factory_ui'
+[0.510s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[0.510s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) discover
+[0.510s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) using defaults
+[0.510s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) discover
+[0.510s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) using defaults
+[0.539s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) check parameters
+[0.539s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) discover
+[0.544s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 9 installed packages in /home/nick/ros2_ws/install
+[0.545s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 450 installed packages in /opt/ros/humble
+[0.547s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) using defaults
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_bringup' build argument 'cmake_args' from command line to 'None'
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_bringup' build argument 'cmake_target' from command line to 'None'
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_bringup' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_bringup' build argument 'cmake_clean_cache' from command line to 'False'
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_bringup' build argument 'cmake_clean_first' from command line to 'False'
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_bringup' build argument 'cmake_force_configure' from command line to 'False'
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_bringup' build argument 'ament_cmake_args' from command line to 'None'
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_bringup' build argument 'catkin_cmake_args' from command line to 'None'
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_bringup' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.613s] DEBUG:colcon.colcon_core.verb:Building package 'smart_factory_bringup' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/nick/smart_factory_ws/build/smart_factory_bringup', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/nick/smart_factory_ws/install/smart_factory_bringup', 'merge_install': False, 'path': '/home/nick/smart_factory_ws/src/smart_factory_bringup', 'symlink_install': True, 'test_result_base': None}
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_fleet_msgs' build argument 'cmake_args' from command line to 'None'
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_fleet_msgs' build argument 'cmake_target' from command line to 'None'
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_fleet_msgs' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_fleet_msgs' build argument 'cmake_clean_cache' from command line to 'False'
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_fleet_msgs' build argument 'cmake_clean_first' from command line to 'False'
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_fleet_msgs' build argument 'cmake_force_configure' from command line to 'False'
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_fleet_msgs' build argument 'ament_cmake_args' from command line to 'None'
+[0.613s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_fleet_msgs' build argument 'catkin_cmake_args' from command line to 'None'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_fleet_msgs' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.614s] DEBUG:colcon.colcon_core.verb:Building package 'smart_factory_fleet_msgs' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs', 'merge_install': False, 'path': '/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs', 'symlink_install': True, 'test_result_base': None}
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_task_server' build argument 'cmake_args' from command line to 'None'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_task_server' build argument 'cmake_target' from command line to 'None'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_task_server' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_task_server' build argument 'cmake_clean_cache' from command line to 'False'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_task_server' build argument 'cmake_clean_first' from command line to 'False'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_task_server' build argument 'cmake_force_configure' from command line to 'False'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_task_server' build argument 'ament_cmake_args' from command line to 'None'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_task_server' build argument 'catkin_cmake_args' from command line to 'None'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_task_server' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.614s] DEBUG:colcon.colcon_core.verb:Building package 'smart_factory_task_server' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/nick/smart_factory_ws/build/smart_factory_task_server', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/nick/smart_factory_ws/install/smart_factory_task_server', 'merge_install': False, 'path': '/home/nick/smart_factory_ws/src/smart_factory_task_server', 'symlink_install': True, 'test_result_base': None}
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_ui' build argument 'cmake_args' from command line to 'None'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_ui' build argument 'cmake_target' from command line to 'None'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_ui' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_ui' build argument 'cmake_clean_cache' from command line to 'False'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_ui' build argument 'cmake_clean_first' from command line to 'False'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_ui' build argument 'cmake_force_configure' from command line to 'False'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_ui' build argument 'ament_cmake_args' from command line to 'None'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_ui' build argument 'catkin_cmake_args' from command line to 'None'
+[0.614s] Level 5:colcon.colcon_core.verb:set package 'smart_factory_ui' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.614s] DEBUG:colcon.colcon_core.verb:Building package 'smart_factory_ui' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/nick/smart_factory_ws/build/smart_factory_ui', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/nick/smart_factory_ws/install/smart_factory_ui', 'merge_install': False, 'path': '/home/nick/smart_factory_ws/src/smart_factory_ui', 'symlink_install': True, 'test_result_base': None}
+[0.614s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[0.616s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[0.616s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/nick/smart_factory_ws/src/smart_factory_bringup' with build type 'ament_python'
+[0.616s] Level 1:colcon.colcon_core.shell:create_environment_hook('smart_factory_bringup', 'ament_prefix_path')
+[0.624s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[0.624s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/install/smart_factory_bringup/share/smart_factory_bringup/hook/ament_prefix_path.ps1'
+[0.625s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/nick/smart_factory_ws/install/smart_factory_bringup/share/smart_factory_bringup/hook/ament_prefix_path.dsv'
+[0.625s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/install/smart_factory_bringup/share/smart_factory_bringup/hook/ament_prefix_path.sh'
+[0.626s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.626s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.630s] INFO:colcon.colcon_ros.task.ament_cmake.build:Building ROS package in '/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs' with build type 'ament_cmake'
+[0.630s] INFO:colcon.colcon_cmake.task.cmake.build:Building CMake package in '/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs'
+[0.631s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.631s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.634s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/nick/smart_factory_ws/src/smart_factory_task_server' with build type 'ament_python'
+[0.634s] Level 1:colcon.colcon_core.shell:create_environment_hook('smart_factory_task_server', 'ament_prefix_path')
+[0.634s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/install/smart_factory_task_server/share/smart_factory_task_server/hook/ament_prefix_path.ps1'
+[0.635s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/nick/smart_factory_ws/install/smart_factory_task_server/share/smart_factory_task_server/hook/ament_prefix_path.dsv'
+[0.635s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/install/smart_factory_task_server/share/smart_factory_task_server/hook/ament_prefix_path.sh'
+[0.636s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.636s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.639s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/nick/smart_factory_ws/src/smart_factory_ui' with build type 'ament_python'
+[0.639s] Level 1:colcon.colcon_core.shell:create_environment_hook('smart_factory_ui', 'ament_prefix_path')
+[0.640s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/install/smart_factory_ui/share/smart_factory_ui/hook/ament_prefix_path.ps1'
+[0.640s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/nick/smart_factory_ws/install/smart_factory_ui/share/smart_factory_ui/hook/ament_prefix_path.dsv'
+[0.640s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/install/smart_factory_ui/share/smart_factory_ui/hook/ament_prefix_path.sh'
+[0.641s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.641s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.845s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/nick/smart_factory_ws/src/smart_factory_bringup'
+[0.845s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.845s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.853s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake /home/nick/smart_factory_ws/src/smart_factory_fleet_msgs -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs
+[1.054s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/nick/smart_factory_ws/src/smart_factory_task_server'
+[1.054s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.054s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.270s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/nick/smart_factory_ws/src/smart_factory_ui'
+[1.270s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.270s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.721s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake /home/nick/smart_factory_ws/src/smart_factory_fleet_msgs -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs
+[1.722s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/nick/smart_factory_ws/build/smart_factory_fleet_msgs -- -j12 -l12
+[1.764s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/nick/smart_factory_ws/build/smart_factory_fleet_msgs -- -j12 -l12
+[1.776s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /home/nick/smart_factory_ws/build/smart_factory_fleet_msgs
+[1.781s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/nick/smart_factory_ws/build/smart_factory_task_server': PYTHONPATH=/home/nick/smart_factory_ws/build/smart_factory_task_server/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/nick/smart_factory_ws/install/smart_factory_task_server/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/nick/smart_factory_ws/build/smart_factory_task_server/build --no-deps symlink_data
+[1.784s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/nick/smart_factory_ws/build/smart_factory_ui': PYTHONPATH=/home/nick/smart_factory_ws/build/smart_factory_ui/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/nick/smart_factory_ws/install/smart_factory_ui/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/nick/smart_factory_ws/build/smart_factory_ui/build --no-deps symlink_data
+[1.787s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/nick/smart_factory_ws/build/smart_factory_bringup': PYTHONPATH=/home/nick/smart_factory_ws/build/smart_factory_bringup/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/nick/smart_factory_ws/install/smart_factory_bringup/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/nick/smart_factory_ws/build/smart_factory_bringup/build --no-deps symlink_data
+[1.919s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(smart_factory_fleet_msgs)
+[1.920s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /home/nick/smart_factory_ws/build/smart_factory_fleet_msgs
+[1.928s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs' for CMake module files
+[1.929s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs' for CMake config files
+[1.929s] Level 1:colcon.colcon_core.shell:create_environment_hook('smart_factory_fleet_msgs', 'cmake_prefix_path')
+[1.930s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/smart_factory_fleet_msgs/hook/cmake_prefix_path.ps1'
+[1.930s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/smart_factory_fleet_msgs/hook/cmake_prefix_path.dsv'
+[1.930s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/smart_factory_fleet_msgs/hook/cmake_prefix_path.sh'
+[1.931s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/bin'
+[1.931s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/lib/pkgconfig/smart_factory_fleet_msgs.pc'
+[1.931s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/lib/python3.10/site-packages'
+[1.931s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/bin'
+[1.931s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/smart_factory_fleet_msgs/package.ps1'
+[1.932s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/smart_factory_fleet_msgs/package.dsv'
+[1.933s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/smart_factory_fleet_msgs/package.sh'
+[1.933s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/smart_factory_fleet_msgs/package.bash'
+[1.935s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/smart_factory_fleet_msgs/package.zsh'
+[1.936s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/colcon-core/packages/smart_factory_fleet_msgs)
+[1.936s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(smart_factory_fleet_msgs)
+[1.936s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs' for CMake module files
+[1.936s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs' for CMake config files
+[1.937s] Level 1:colcon.colcon_core.shell:create_environment_hook('smart_factory_fleet_msgs', 'cmake_prefix_path')
+[1.937s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/smart_factory_fleet_msgs/hook/cmake_prefix_path.ps1'
+[1.937s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/smart_factory_fleet_msgs/hook/cmake_prefix_path.dsv'
+[1.938s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/smart_factory_fleet_msgs/hook/cmake_prefix_path.sh'
+[1.938s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/bin'
+[1.939s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/lib/pkgconfig/smart_factory_fleet_msgs.pc'
+[1.939s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/lib/python3.10/site-packages'
+[1.939s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/bin'
+[1.939s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/smart_factory_fleet_msgs/package.ps1'
+[1.940s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/smart_factory_fleet_msgs/package.dsv'
+[1.940s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/smart_factory_fleet_msgs/package.sh'
+[1.941s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/smart_factory_fleet_msgs/package.bash'
+[1.941s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/smart_factory_fleet_msgs/package.zsh'
+[1.942s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/nick/smart_factory_ws/install/smart_factory_fleet_msgs/share/colcon-core/packages/smart_factory_fleet_msgs)
+[2.153s] Level 1:colcon.colcon_core.shell:create_environment_hook('smart_factory_task_server', 'pythonpath_develop')
+[2.153s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/build/smart_factory_task_server/share/smart_factory_task_server/hook/pythonpath_develop.ps1'
+[2.154s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/nick/smart_factory_ws/build/smart_factory_task_server' returned '0': PYTHONPATH=/home/nick/smart_factory_ws/build/smart_factory_task_server/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/nick/smart_factory_ws/install/smart_factory_task_server/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/nick/smart_factory_ws/build/smart_factory_task_server/build --no-deps symlink_data
+[2.154s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/nick/smart_factory_ws/build/smart_factory_task_server/share/smart_factory_task_server/hook/pythonpath_develop.dsv'
+[2.155s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/build/smart_factory_task_server/share/smart_factory_task_server/hook/pythonpath_develop.sh'
+[2.155s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_task_server' for CMake module files
+[2.155s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_task_server' for CMake config files
+[2.156s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_task_server/lib'
+[2.156s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_task_server/bin'
+[2.156s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_task_server/lib/pkgconfig/smart_factory_task_server.pc'
+[2.157s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_task_server/lib/python3.10/site-packages'
+[2.157s] Level 1:colcon.colcon_core.shell:create_environment_hook('smart_factory_task_server', 'pythonpath')
+[2.157s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/install/smart_factory_task_server/share/smart_factory_task_server/hook/pythonpath.ps1'
+[2.157s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/nick/smart_factory_ws/install/smart_factory_task_server/share/smart_factory_task_server/hook/pythonpath.dsv'
+[2.157s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/install/smart_factory_task_server/share/smart_factory_task_server/hook/pythonpath.sh'
+[2.158s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_task_server/bin'
+[2.158s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(smart_factory_task_server)
+[2.158s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_task_server/share/smart_factory_task_server/package.ps1'
+[2.159s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/nick/smart_factory_ws/install/smart_factory_task_server/share/smart_factory_task_server/package.dsv'
+[2.159s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_task_server/share/smart_factory_task_server/package.sh'
+[2.159s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_task_server/share/smart_factory_task_server/package.bash'
+[2.159s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_task_server/share/smart_factory_task_server/package.zsh'
+[2.160s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/nick/smart_factory_ws/install/smart_factory_task_server/share/colcon-core/packages/smart_factory_task_server)
+[2.161s] Level 1:colcon.colcon_core.shell:create_environment_hook('smart_factory_ui', 'pythonpath_develop')
+[2.161s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/build/smart_factory_ui/share/smart_factory_ui/hook/pythonpath_develop.ps1'
+[2.162s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/nick/smart_factory_ws/build/smart_factory_ui' returned '0': PYTHONPATH=/home/nick/smart_factory_ws/build/smart_factory_ui/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/nick/smart_factory_ws/install/smart_factory_ui/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/nick/smart_factory_ws/build/smart_factory_ui/build --no-deps symlink_data
+[2.162s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/nick/smart_factory_ws/build/smart_factory_ui/share/smart_factory_ui/hook/pythonpath_develop.dsv'
+[2.163s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/build/smart_factory_ui/share/smart_factory_ui/hook/pythonpath_develop.sh'
+[2.163s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_ui' for CMake module files
+[2.163s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_ui' for CMake config files
+[2.164s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_ui/lib'
+[2.164s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_ui/bin'
+[2.164s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_ui/lib/pkgconfig/smart_factory_ui.pc'
+[2.164s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_ui/lib/python3.10/site-packages'
+[2.164s] Level 1:colcon.colcon_core.shell:create_environment_hook('smart_factory_ui', 'pythonpath')
+[2.164s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/install/smart_factory_ui/share/smart_factory_ui/hook/pythonpath.ps1'
+[2.164s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/nick/smart_factory_ws/install/smart_factory_ui/share/smart_factory_ui/hook/pythonpath.dsv'
+[2.165s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/install/smart_factory_ui/share/smart_factory_ui/hook/pythonpath.sh'
+[2.165s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_ui/bin'
+[2.165s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(smart_factory_ui)
+[2.165s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_ui/share/smart_factory_ui/package.ps1'
+[2.166s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/nick/smart_factory_ws/install/smart_factory_ui/share/smart_factory_ui/package.dsv'
+[2.166s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_ui/share/smart_factory_ui/package.sh'
+[2.166s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_ui/share/smart_factory_ui/package.bash'
+[2.166s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_ui/share/smart_factory_ui/package.zsh'
+[2.167s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/nick/smart_factory_ws/install/smart_factory_ui/share/colcon-core/packages/smart_factory_ui)
+[2.169s] Level 1:colcon.colcon_core.shell:create_environment_hook('smart_factory_bringup', 'pythonpath_develop')
+[2.169s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/build/smart_factory_bringup/share/smart_factory_bringup/hook/pythonpath_develop.ps1'
+[2.169s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/nick/smart_factory_ws/build/smart_factory_bringup' returned '0': PYTHONPATH=/home/nick/smart_factory_ws/build/smart_factory_bringup/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/nick/smart_factory_ws/install/smart_factory_bringup/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/nick/smart_factory_ws/build/smart_factory_bringup/build --no-deps symlink_data
+[2.170s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/nick/smart_factory_ws/build/smart_factory_bringup/share/smart_factory_bringup/hook/pythonpath_develop.dsv'
+[2.170s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/build/smart_factory_bringup/share/smart_factory_bringup/hook/pythonpath_develop.sh'
+[2.170s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_bringup' for CMake module files
+[2.170s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_bringup' for CMake config files
+[2.171s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_bringup/lib'
+[2.171s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_bringup/bin'
+[2.171s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_bringup/lib/pkgconfig/smart_factory_bringup.pc'
+[2.171s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_bringup/lib/python3.10/site-packages'
+[2.171s] Level 1:colcon.colcon_core.shell:create_environment_hook('smart_factory_bringup', 'pythonpath')
+[2.171s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/install/smart_factory_bringup/share/smart_factory_bringup/hook/pythonpath.ps1'
+[2.172s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/nick/smart_factory_ws/install/smart_factory_bringup/share/smart_factory_bringup/hook/pythonpath.dsv'
+[2.172s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/nick/smart_factory_ws/install/smart_factory_bringup/share/smart_factory_bringup/hook/pythonpath.sh'
+[2.172s] Level 1:colcon.colcon_core.environment:checking '/home/nick/smart_factory_ws/install/smart_factory_bringup/bin'
+[2.172s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(smart_factory_bringup)
+[2.172s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_bringup/share/smart_factory_bringup/package.ps1'
+[2.173s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/nick/smart_factory_ws/install/smart_factory_bringup/share/smart_factory_bringup/package.dsv'
+[2.173s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_bringup/share/smart_factory_bringup/package.sh'
+[2.173s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_bringup/share/smart_factory_bringup/package.bash'
+[2.174s] INFO:colcon.colcon_core.shell:Creating package script '/home/nick/smart_factory_ws/install/smart_factory_bringup/share/smart_factory_bringup/package.zsh'
+[2.174s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/nick/smart_factory_ws/install/smart_factory_bringup/share/colcon-core/packages/smart_factory_bringup)
+[2.174s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[2.174s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[2.175s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with '0'
+[2.175s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[2.182s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[2.182s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[2.182s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[2.191s] DEBUG:colcon.colcon_core.event_reactor:joined thread
+[2.191s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/nick/smart_factory_ws/install/local_setup.ps1'
+[2.192s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/nick/smart_factory_ws/install/_local_setup_util_ps1.py'
+[2.193s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/nick/smart_factory_ws/install/setup.ps1'
+[2.195s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/nick/smart_factory_ws/install/local_setup.sh'
+[2.195s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/nick/smart_factory_ws/install/_local_setup_util_sh.py'
+[2.196s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/nick/smart_factory_ws/install/setup.sh'
+[2.197s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/nick/smart_factory_ws/install/local_setup.bash'
+[2.198s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/nick/smart_factory_ws/install/setup.bash'
+[2.200s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/nick/smart_factory_ws/install/local_setup.zsh'
+[2.200s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/nick/smart_factory_ws/install/setup.zsh'

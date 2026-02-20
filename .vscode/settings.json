@@ -1,0 +1,23 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/nick/smart_factory_ws/build/smart_factory_ui",
+        "/home/nick/smart_factory_ws/install/smart_factory_ui/lib/python3.10/site-packages",
+        "/home/nick/smart_factory_ws/build/smart_factory_task_server",
+        "/home/nick/smart_factory_ws/install/smart_factory_task_server/lib/python3.10/site-packages",
+        "/home/nick/smart_factory_ws/build/smart_factory_bringup",
+        "/home/nick/smart_factory_ws/install/smart_factory_bringup/lib/python3.10/site-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/nick/smart_factory_ws/build/smart_factory_ui",
+        "/home/nick/smart_factory_ws/install/smart_factory_ui/lib/python3.10/site-packages",
+        "/home/nick/smart_factory_ws/build/smart_factory_task_server",
+        "/home/nick/smart_factory_ws/install/smart_factory_task_server/lib/python3.10/site-packages",
+        "/home/nick/smart_factory_ws/build/smart_factory_bringup",
+        "/home/nick/smart_factory_ws/install/smart_factory_bringup/lib/python3.10/site-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "cmake.sourceDirectory": "/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs"
+}

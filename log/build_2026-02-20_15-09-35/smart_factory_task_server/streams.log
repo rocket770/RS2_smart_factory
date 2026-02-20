@@ -1,0 +1,16 @@
+[0.979s] Invoking command in '/home/nick/smart_factory_ws/build/smart_factory_task_server': PYTHONPATH=/home/nick/smart_factory_ws/build/smart_factory_task_server/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/nick/smart_factory_ws/install/smart_factory_task_server/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/nick/smart_factory_ws/build/smart_factory_task_server/build --no-deps symlink_data
+[1.254s] running develop
+[1.450s] running egg_info
+[1.451s] writing smart_factory_task_server.egg-info/PKG-INFO
+[1.451s] writing dependency_links to smart_factory_task_server.egg-info/dependency_links.txt
+[1.451s] writing entry points to smart_factory_task_server.egg-info/entry_points.txt
+[1.452s] writing requirements to smart_factory_task_server.egg-info/requires.txt
+[1.452s] writing top-level names to smart_factory_task_server.egg-info/top_level.txt
+[1.454s] reading manifest file 'smart_factory_task_server.egg-info/SOURCES.txt'
+[1.454s] writing manifest file 'smart_factory_task_server.egg-info/SOURCES.txt'
+[1.456s] running build_ext
+[1.456s] Creating /home/nick/smart_factory_ws/install/smart_factory_task_server/lib/python3.10/site-packages/smart-factory-task-server.egg-link (link to .)
+[1.457s] 
+[1.457s] Installed /home/nick/smart_factory_ws/build/smart_factory_task_server
+[1.457s] running symlink_data
+[1.489s] Invoked command in '/home/nick/smart_factory_ws/build/smart_factory_task_server' returned '0': PYTHONPATH=/home/nick/smart_factory_ws/build/smart_factory_task_server/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/nick/smart_factory_ws/install/smart_factory_task_server/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/nick/smart_factory_ws/build/smart_factory_task_server/build --no-deps symlink_data
