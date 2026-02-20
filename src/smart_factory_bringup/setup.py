@@ -14,7 +14,7 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='nick',
-    maintainer_email='skrillx789@hotmail.com',
+    maintainer_email='',
     description='TODO: Package description',
     license='TODO: License declaration',
     tests_require=['pytest'],
