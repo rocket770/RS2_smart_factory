@@ -310,6 +310,90 @@ message(STATUS "Execute custom install script")
 
 # begin of custom install code
 
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_index/share/ament_index/resource_index/rosidl_interfaces/smart_factory_fleet_msgs" "DESTINATION" "share/ament_index/resource_index/rosidl_interfaces")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_index/share/ament_index/resource_index/rosidl_interfaces/smart_factory_fleet_msgs" "DESTINATION" "share/ament_index/resource_index/rosidl_interfaces")
+
+# install(DIRECTORY "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_generator_c/smart_factory_fleet_msgs/" "DESTINATION" "include/smart_factory_fleet_msgs/smart_factory_fleet_msgs" "PATTERN" "*.h")
+ament_cmake_symlink_install_directory("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" DIRECTORY "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_generator_c/smart_factory_fleet_msgs/" "DESTINATION" "include/smart_factory_fleet_msgs/smart_factory_fleet_msgs" "PATTERN" "*.h")
+
+# install(FILES "/opt/ros/humble/lib/python3.10/site-packages/ament_package/template/environment_hook/library_path.sh" "DESTINATION" "share/smart_factory_fleet_msgs/environment")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/opt/ros/humble/lib/python3.10/site-packages/ament_package/template/environment_hook/library_path.sh" "DESTINATION" "share/smart_factory_fleet_msgs/environment")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_environment_hooks/library_path.dsv" "DESTINATION" "share/smart_factory_fleet_msgs/environment")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_environment_hooks/library_path.dsv" "DESTINATION" "share/smart_factory_fleet_msgs/environment")
+
+# install(DIRECTORY "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_typesupport_fastrtps_c/smart_factory_fleet_msgs/" "DESTINATION" "include/smart_factory_fleet_msgs/smart_factory_fleet_msgs" "PATTERN_EXCLUDE" "*.cpp")
+ament_cmake_symlink_install_directory("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" DIRECTORY "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_typesupport_fastrtps_c/smart_factory_fleet_msgs/" "DESTINATION" "include/smart_factory_fleet_msgs/smart_factory_fleet_msgs" "PATTERN_EXCLUDE" "*.cpp")
+
+# install(DIRECTORY "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_typesupport_introspection_c/smart_factory_fleet_msgs/" "DESTINATION" "include/smart_factory_fleet_msgs/smart_factory_fleet_msgs" "PATTERN" "*.h")
+ament_cmake_symlink_install_directory("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" DIRECTORY "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_typesupport_introspection_c/smart_factory_fleet_msgs/" "DESTINATION" "include/smart_factory_fleet_msgs/smart_factory_fleet_msgs" "PATTERN" "*.h")
+
+# install(DIRECTORY "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_generator_cpp/smart_factory_fleet_msgs/" "DESTINATION" "include/smart_factory_fleet_msgs/smart_factory_fleet_msgs" "PATTERN" "*.hpp")
+ament_cmake_symlink_install_directory("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" DIRECTORY "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_generator_cpp/smart_factory_fleet_msgs/" "DESTINATION" "include/smart_factory_fleet_msgs/smart_factory_fleet_msgs" "PATTERN" "*.hpp")
+
+# install(DIRECTORY "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_typesupport_fastrtps_cpp/smart_factory_fleet_msgs/" "DESTINATION" "include/smart_factory_fleet_msgs/smart_factory_fleet_msgs" "PATTERN_EXCLUDE" "*.cpp")
+ament_cmake_symlink_install_directory("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" DIRECTORY "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_typesupport_fastrtps_cpp/smart_factory_fleet_msgs/" "DESTINATION" "include/smart_factory_fleet_msgs/smart_factory_fleet_msgs" "PATTERN_EXCLUDE" "*.cpp")
+
+# install(DIRECTORY "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_typesupport_introspection_cpp/smart_factory_fleet_msgs/" "DESTINATION" "include/smart_factory_fleet_msgs/smart_factory_fleet_msgs" "PATTERN" "*.hpp")
+ament_cmake_symlink_install_directory("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" DIRECTORY "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_typesupport_introspection_cpp/smart_factory_fleet_msgs/" "DESTINATION" "include/smart_factory_fleet_msgs/smart_factory_fleet_msgs" "PATTERN" "*.hpp")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_environment_hooks/pythonpath.sh" "DESTINATION" "share/smart_factory_fleet_msgs/environment")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_environment_hooks/pythonpath.sh" "DESTINATION" "share/smart_factory_fleet_msgs/environment")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_environment_hooks/pythonpath.dsv" "DESTINATION" "share/smart_factory_fleet_msgs/environment")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_environment_hooks/pythonpath.dsv" "DESTINATION" "share/smart_factory_fleet_msgs/environment")
+
+# install(DIRECTORY "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_python/smart_factory_fleet_msgs/smart_factory_fleet_msgs.egg-info/" "DESTINATION" "local/lib/python3.10/dist-packages/smart_factory_fleet_msgs-0.0.0-py3.10.egg-info")
+ament_cmake_symlink_install_directory("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" DIRECTORY "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_python/smart_factory_fleet_msgs/smart_factory_fleet_msgs.egg-info/" "DESTINATION" "local/lib/python3.10/dist-packages/smart_factory_fleet_msgs-0.0.0-py3.10.egg-info")
+
+# install(DIRECTORY "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_generator_py/smart_factory_fleet_msgs/" "DESTINATION" "local/lib/python3.10/dist-packages/smart_factory_fleet_msgs" "PATTERN_EXCLUDE" "*.pyc" "PATTERN_EXCLUDE" "__pycache__")
+ament_cmake_symlink_install_directory("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" DIRECTORY "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_generator_py/smart_factory_fleet_msgs/" "DESTINATION" "local/lib/python3.10/dist-packages/smart_factory_fleet_msgs" "PATTERN_EXCLUDE" "*.pyc" "PATTERN_EXCLUDE" "__pycache__")
+
+# install("TARGETS" "smart_factory_fleet_msgs__rosidl_typesupport_fastrtps_c__pyext" "DESTINATION" "local/lib/python3.10/dist-packages/smart_factory_fleet_msgs")
+include("/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_symlink_install_targets_0_${CMAKE_INSTALL_CONFIG_NAME}.cmake")
+
+# install("TARGETS" "smart_factory_fleet_msgs__rosidl_typesupport_introspection_c__pyext" "DESTINATION" "local/lib/python3.10/dist-packages/smart_factory_fleet_msgs")
+include("/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_symlink_install_targets_1_${CMAKE_INSTALL_CONFIG_NAME}.cmake")
+
+# install("TARGETS" "smart_factory_fleet_msgs__rosidl_typesupport_c__pyext" "DESTINATION" "local/lib/python3.10/dist-packages/smart_factory_fleet_msgs")
+include("/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_symlink_install_targets_2_${CMAKE_INSTALL_CONFIG_NAME}.cmake")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_adapter/smart_factory_fleet_msgs/msg/Task.idl" "DESTINATION" "share/smart_factory_fleet_msgs/msg")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_adapter/smart_factory_fleet_msgs/msg/Task.idl" "DESTINATION" "share/smart_factory_fleet_msgs/msg")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_adapter/smart_factory_fleet_msgs/msg/RobotState.idl" "DESTINATION" "share/smart_factory_fleet_msgs/msg")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_adapter/smart_factory_fleet_msgs/msg/RobotState.idl" "DESTINATION" "share/smart_factory_fleet_msgs/msg")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_adapter/smart_factory_fleet_msgs/srv/AddTask.idl" "DESTINATION" "share/smart_factory_fleet_msgs/srv")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_adapter/smart_factory_fleet_msgs/srv/AddTask.idl" "DESTINATION" "share/smart_factory_fleet_msgs/srv")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_adapter/smart_factory_fleet_msgs/srv/GetFleetState.idl" "DESTINATION" "share/smart_factory_fleet_msgs/srv")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_adapter/smart_factory_fleet_msgs/srv/GetFleetState.idl" "DESTINATION" "share/smart_factory_fleet_msgs/srv")
+
+# install(FILES "/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs/msg/Task.msg" "DESTINATION" "share/smart_factory_fleet_msgs/msg")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs/msg/Task.msg" "DESTINATION" "share/smart_factory_fleet_msgs/msg")
+
+# install(FILES "/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs/msg/RobotState.msg" "DESTINATION" "share/smart_factory_fleet_msgs/msg")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs/msg/RobotState.msg" "DESTINATION" "share/smart_factory_fleet_msgs/msg")
+
+# install(FILES "/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs/srv/AddTask.srv" "DESTINATION" "share/smart_factory_fleet_msgs/srv")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs/srv/AddTask.srv" "DESTINATION" "share/smart_factory_fleet_msgs/srv")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_cmake/srv/AddTask_Request.msg" "DESTINATION" "share/smart_factory_fleet_msgs/srv")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_cmake/srv/AddTask_Request.msg" "DESTINATION" "share/smart_factory_fleet_msgs/srv")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_cmake/srv/AddTask_Response.msg" "DESTINATION" "share/smart_factory_fleet_msgs/srv")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_cmake/srv/AddTask_Response.msg" "DESTINATION" "share/smart_factory_fleet_msgs/srv")
+
+# install(FILES "/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs/srv/GetFleetState.srv" "DESTINATION" "share/smart_factory_fleet_msgs/srv")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs/srv/GetFleetState.srv" "DESTINATION" "share/smart_factory_fleet_msgs/srv")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_cmake/srv/GetFleetState_Request.msg" "DESTINATION" "share/smart_factory_fleet_msgs/srv")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_cmake/srv/GetFleetState_Request.msg" "DESTINATION" "share/smart_factory_fleet_msgs/srv")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_cmake/srv/GetFleetState_Response.msg" "DESTINATION" "share/smart_factory_fleet_msgs/srv")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_cmake/srv/GetFleetState_Response.msg" "DESTINATION" "share/smart_factory_fleet_msgs/srv")
+
 # install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_index/share/ament_index/resource_index/package_run_dependencies/smart_factory_fleet_msgs" "DESTINATION" "share/ament_index/resource_index/package_run_dependencies")
 ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_index/share/ament_index/resource_index/package_run_dependencies/smart_factory_fleet_msgs" "DESTINATION" "share/ament_index/resource_index/package_run_dependencies")
 
@@ -345,6 +429,27 @@ ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory
 
 # install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_index/share/ament_index/resource_index/packages/smart_factory_fleet_msgs" "DESTINATION" "share/ament_index/resource_index/packages")
 ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_index/share/ament_index/resource_index/packages/smart_factory_fleet_msgs" "DESTINATION" "share/ament_index/resource_index/packages")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_cmake/rosidl_cmake-extras.cmake" "DESTINATION" "share/smart_factory_fleet_msgs/cmake")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_cmake/rosidl_cmake-extras.cmake" "DESTINATION" "share/smart_factory_fleet_msgs/cmake")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_export_dependencies/ament_cmake_export_dependencies-extras.cmake" "DESTINATION" "share/smart_factory_fleet_msgs/cmake")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_export_dependencies/ament_cmake_export_dependencies-extras.cmake" "DESTINATION" "share/smart_factory_fleet_msgs/cmake")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_export_include_directories/ament_cmake_export_include_directories-extras.cmake" "DESTINATION" "share/smart_factory_fleet_msgs/cmake")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_export_include_directories/ament_cmake_export_include_directories-extras.cmake" "DESTINATION" "share/smart_factory_fleet_msgs/cmake")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_export_libraries/ament_cmake_export_libraries-extras.cmake" "DESTINATION" "share/smart_factory_fleet_msgs/cmake")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_export_libraries/ament_cmake_export_libraries-extras.cmake" "DESTINATION" "share/smart_factory_fleet_msgs/cmake")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_export_targets/ament_cmake_export_targets-extras.cmake" "DESTINATION" "share/smart_factory_fleet_msgs/cmake")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_export_targets/ament_cmake_export_targets-extras.cmake" "DESTINATION" "share/smart_factory_fleet_msgs/cmake")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_cmake/rosidl_cmake_export_typesupport_targets-extras.cmake" "DESTINATION" "share/smart_factory_fleet_msgs/cmake")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_cmake/rosidl_cmake_export_typesupport_targets-extras.cmake" "DESTINATION" "share/smart_factory_fleet_msgs/cmake")
+
+# install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake" "DESTINATION" "share/smart_factory_fleet_msgs/cmake")
+ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake" "DESTINATION" "share/smart_factory_fleet_msgs/cmake")
 
 # install(FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_core/smart_factory_fleet_msgsConfig.cmake" "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_core/smart_factory_fleet_msgsConfig-version.cmake" "DESTINATION" "share/smart_factory_fleet_msgs/cmake")
 ament_cmake_symlink_install_files("/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs" FILES "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_core/smart_factory_fleet_msgsConfig.cmake" "/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_core/smart_factory_fleet_msgsConfig-version.cmake" "DESTINATION" "share/smart_factory_fleet_msgs/cmake")

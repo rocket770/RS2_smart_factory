@@ -1,0 +1,1 @@
+/home/nick/smart_factory_ws/build/smart_factory_mapping/launch/slam_robot.launch.py

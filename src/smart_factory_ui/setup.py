@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'add_task_cli = smart_factory_ui.add_task_cli:main',
         ],
     },
 )
