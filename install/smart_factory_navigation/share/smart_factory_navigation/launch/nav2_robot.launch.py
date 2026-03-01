@@ -1,1 +1,0 @@
-/home/nick/smart_factory_ws/build/smart_factory_navigation/launch/nav2_robot.launch.py

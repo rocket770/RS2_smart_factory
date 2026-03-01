@@ -1,1 +1,4 @@
-/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_cmake/srv/AddTask_Request.msg
+string type
+int32 priority
+geometry_msgs/PoseStamped pickup_pose
+geometry_msgs/PoseStamped dropoff_pose

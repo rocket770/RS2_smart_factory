@@ -1,1 +1,30 @@
-/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_adapter/smart_factory_fleet_msgs/msg/RobotState.idl
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from smart_factory_fleet_msgs/msg/RobotState.msg
+// generated code does not contain a copyright notice
+
+#include "builtin_interfaces/msg/Time.idl"
+#include "geometry_msgs/msg/PoseStamped.idl"
+
+module smart_factory_fleet_msgs {
+  module msg {
+    struct RobotState {
+      builtin_interfaces::msg::Time stamp;
+
+      @verbatim (language="comment", text=
+        "\"robot1\"")
+      string robot_name;
+
+      @verbatim (language="comment", text=
+        "\"idle\"|\"busy\"|\"waiting\"|\"fault\"")
+      string status;
+
+      geometry_msgs::msg::PoseStamped pose;
+
+      @verbatim (language="comment", text=
+        "0..1, optional")
+      float battery;
+
+      string current_task_id;
+    };
+  };
+};

@@ -55,6 +55,3 @@ endforeach()
 message(STATUS "Execute custom uninstall script")
 
 # begin of custom uninstall code
-
-# uninstall files installed using the symlink install functions
-include("/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_symlink_install/ament_cmake_symlink_install_uninstall_script.cmake")

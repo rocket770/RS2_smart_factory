@@ -1,1 +1,3 @@
-/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs/srv/GetFleetState.srv
+---
+smart_factory_fleet_msgs/RobotState[] robots
+smart_factory_fleet_msgs/Task[] tasks

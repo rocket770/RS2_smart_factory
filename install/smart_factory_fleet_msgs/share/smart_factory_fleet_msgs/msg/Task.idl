@@ -1,1 +1,34 @@
-/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_adapter/smart_factory_fleet_msgs/msg/Task.idl
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from smart_factory_fleet_msgs/msg/Task.msg
+// generated code does not contain a copyright notice
+
+#include "builtin_interfaces/msg/Time.idl"
+#include "geometry_msgs/msg/PoseStamped.idl"
+
+module smart_factory_fleet_msgs {
+  module msg {
+    struct Task {
+      builtin_interfaces::msg::Time stamp;
+
+      string task_id;
+
+      @verbatim (language="comment", text=
+        "e.g. \"pickup_dropoff\"")
+      string type;
+
+      int32 priority;
+
+      geometry_msgs::msg::PoseStamped pickup_pose;
+
+      geometry_msgs::msg::PoseStamped dropoff_pose;
+
+      @verbatim (language="comment", text=
+        "empty if unassigned")
+      string assigned_robot;
+
+      @verbatim (language="comment", text=
+        "\"queued\"|\"assigned\"|\"enroute_pickup\"|\"enroute_dropoff\"|\"done\"|\"failed\"")
+      string status;
+    };
+  };
+};

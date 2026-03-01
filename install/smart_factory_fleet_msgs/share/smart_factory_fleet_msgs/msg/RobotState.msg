@@ -1,1 +1,6 @@
-/home/nick/smart_factory_ws/src/smart_factory_fleet_msgs/msg/RobotState.msg
+builtin_interfaces/Time stamp
+string robot_name       # "robot1"
+string status           # "idle"|"busy"|"waiting"|"fault"
+geometry_msgs/PoseStamped pose
+float32 battery         # 0..1, optional
+string current_task_id
