@@ -1,6 +1,6 @@
 builtin_interfaces/Time stamp
-string robot_name       # "robot1"
-string status           # "idle"|"busy"|"waiting"|"fault"
+string robot_name     
+string status           
 geometry_msgs/PoseStamped pose
-float32 battery         # 0..1, optional
+float32 battery        
 string current_task_id
