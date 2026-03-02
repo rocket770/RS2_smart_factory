@@ -19,7 +19,7 @@ def generate_launch_description():
                     # IMPORTANT: prevent RewrittenYaml root_key behavior
                     'use_namespace': 'False',
                     'namespace': '',
-
+                    'use_composition': 'False',
                     'use_sim_time': 'True',
                     'autostart': 'True',
                     'params_file': '/home/nick/smart_factory_ws/src/smart_factory_navigation/config/nav2_tb3_2.yaml',

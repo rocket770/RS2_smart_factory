@@ -4,7 +4,6 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import PushRosNamespace, SetRemap
 from ament_index_python.packages import get_package_share_directory
 import os
-from launch_ros.actions import SetParameter
 
 def generate_launch_description():
     nav2_bringup_dir = get_package_share_directory('nav2_bringup')
@@ -13,21 +12,18 @@ def generate_launch_description():
     return LaunchDescription([
         GroupAction([
             PushRosNamespace('TB3_1'),
-
-            # Force Nav2 to use GLOBAL TF topics (so it can see slam_toolbox/map frames)
-            SetRemap(src='/TB3_1/tf', dst='/tf'),
-            SetRemap(src='/TB3_1/tf_static', dst='/tf_static'),
-
-            SetParameter(name='robot_base_frame', value='TB3_1/base_link'),
-            SetParameter(name='global_frame', value='TB3_1/odom'),
+            
+            SetRemap(src='tf', dst='/tf'),
+            SetRemap(src='tf_static', dst='/tf_static'),
 
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(nav2_launch),
                 launch_arguments={
-                    'use_namespace': 'True',
-                    'namespace': 'TB3_1',
-                    'use_sim_time': 'True',
-                    'autostart': 'True',
+                    'use_namespace': 'False',
+                    'namespace': '',
+                    'use_composition': 'False',
+                    'use_sim_time': 'true',
+                    'autostart': 'true',
                     'params_file': '/home/nick/smart_factory_ws/src/smart_factory_navigation/config/nav2_tb3_1.yaml',
                 }.items()
             ),

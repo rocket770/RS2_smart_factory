@@ -27,7 +27,7 @@ from launch.actions import RegisterEventHandler
 from launch.event_handlers import OnShutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import PushRosNamespace
+from launch_ros.actions import PushRosNamespace, SetRemap
 
 
 def generate_launch_description():
@@ -127,8 +127,17 @@ def generate_launch_description():
         )
     ))
     for count, spawn_turtlebot_cmd in enumerate(spawn_turtlebot_cmd_list, start=1):
-        ld.add_action(GroupAction([PushRosNamespace(f'{namespace}_{count}'),
-                                  robot_state_publisher_cmd_list[count-1],
-                                  spawn_turtlebot_cmd]))
+        ld.add_action(
+            GroupAction([
+                PushRosNamespace(f'{namespace}_{count}'),
+
+                # CRITICAL: make TF topics namespaced per robot
+                SetRemap(src='/tf', dst='tf'),
+                SetRemap(src='/tf_static', dst='tf_static'),
+
+                robot_state_publisher_cmd_list[count-1],
+                spawn_turtlebot_cmd
+            ])
+        )
 
     return ld

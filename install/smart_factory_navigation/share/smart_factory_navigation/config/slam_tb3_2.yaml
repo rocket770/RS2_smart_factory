@@ -1,8 +1,1 @@
-slam_toolbox:
-  ros__parameters:
-    use_sim_time: true
-    mode: mapping
-    map_frame: map
-    odom_frame: TB3_2/odom
-    base_frame: TB3_2/base_footprint
-    scan_topic: /TB3_2/scan
+/home/nick/smart_factory_ws/build/smart_factory_navigation/config/slam_tb3_2.yaml

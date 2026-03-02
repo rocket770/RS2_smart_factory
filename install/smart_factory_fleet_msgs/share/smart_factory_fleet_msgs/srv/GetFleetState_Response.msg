@@ -1,3 +1,1 @@
-
-smart_factory_fleet_msgs/RobotState[] robots
-smart_factory_fleet_msgs/Task[] tasks
+/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/rosidl_cmake/srv/GetFleetState_Response.msg

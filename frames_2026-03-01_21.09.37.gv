@@ -1,0 +1,28 @@
+digraph G {
+"TB3_2/base_link" -> "TB3_2/wheel_left_link"[label=" Broadcaster: default_authority\nAverage rate: 19.339\nBuffer length: 2.482\nMost recent transform: 6189.173\nOldest transform: 6186.691\n"];
+"TB3_2/base_footprint" -> "TB3_2/base_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"TB3_2/base_link" -> "TB3_2/wheel_right_link"[label=" Broadcaster: default_authority\nAverage rate: 19.339\nBuffer length: 2.482\nMost recent transform: 6189.173\nOldest transform: 6186.691\n"];
+"TB3_2/odom" -> "TB3_2/base_footprint"[label=" Broadcaster: default_authority\nAverage rate: 29.947\nBuffer length: 1.87\nMost recent transform: 6189.173\nOldest transform: 6187.303\n"];
+"TB3_2/base_link" -> "TB3_2/camera_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"TB3_2/camera_link" -> "TB3_2/camera_rgb_frame"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"TB3_2/camera_rgb_frame" -> "TB3_2/camera_rgb_optical_frame"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"TB3_2/base_link" -> "TB3_2/caster_back_left_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"TB3_2/base_link" -> "TB3_2/caster_back_right_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"TB3_2/base_link" -> "TB3_2/imu_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"TB3_2/base_link" -> "TB3_2/base_scan"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"TB3_1/base_footprint" -> "TB3_1/base_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"TB3_1/odom" -> "TB3_1/base_footprint"[label=" Broadcaster: default_authority\nAverage rate: 29.937\nBuffer length: 1.904\nMost recent transform: 6189.202\nOldest transform: 6187.298\n"];
+"TB3_1/base_link" -> "TB3_1/camera_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"TB3_1/camera_link" -> "TB3_1/camera_rgb_frame"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"TB3_1/camera_rgb_frame" -> "TB3_1/camera_rgb_optical_frame"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"TB3_1/base_link" -> "TB3_1/caster_back_left_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"TB3_1/base_link" -> "TB3_1/caster_back_right_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"TB3_1/base_link" -> "TB3_1/imu_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"TB3_1/base_link" -> "TB3_1/base_scan"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"TB3_1/base_link" -> "TB3_1/wheel_left_link"[label=" Broadcaster: default_authority\nAverage rate: 19.748\nBuffer length: 2.38\nMost recent transform: 6189.202\nOldest transform: 6186.822\n"];
+"TB3_1/base_link" -> "TB3_1/wheel_right_link"[label=" Broadcaster: default_authority\nAverage rate: 19.748\nBuffer length: 2.38\nMost recent transform: 6189.202\nOldest transform: 6186.822\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1772428177.9728246"[ shape=plaintext ] ;
+}->"TB3_1/odom";
+}

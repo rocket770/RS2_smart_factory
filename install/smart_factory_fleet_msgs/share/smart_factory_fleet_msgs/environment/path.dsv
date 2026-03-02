@@ -1,1 +1,1 @@
-prepend-non-duplicate-if-exists;PATH;bin
+/home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/ament_cmake_environment_hooks/path.dsv

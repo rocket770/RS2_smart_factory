@@ -1,5 +1,5 @@
 
-amcl:
+/TB3_1/amcl:
   ros__parameters:
     use_sim_time: True
     alpha1: 0.2
@@ -40,7 +40,7 @@ amcl:
     z_short: 0.05
     scan_topic: TB3_1/scan
 
-bt_navigator:
+/TB3_1/bt_navigator:
   ros__parameters:
     use_sim_time: True
     global_frame: map
@@ -102,15 +102,15 @@ bt_navigator:
       - nav2_drive_on_heading_cancel_bt_node
       - nav2_is_battery_charging_condition_bt_node
 
-bt_navigator_navigate_through_poses_rclcpp_node:
+/TB3_1/bt_navigator_navigate_through_poses_rclcpp_node:
   ros__parameters:
     use_sim_time: True
 
-bt_navigator_navigate_to_pose_rclcpp_node:
+/TB3_1/bt_navigator_navigate_to_pose_rclcpp_node:
   ros__parameters:
     use_sim_time: True
 
-controller_server:
+/TB3_1/controller_server:
   ros__parameters:
     use_sim_time: True
     controller_frequency: 5.0
@@ -185,7 +185,7 @@ controller_server:
       RotateToGoal.slowing_factor: 5.0
       RotateToGoal.lookahead_time: -1.0
 
-local_costmap:
+/TB3_1/local_costmap:
   local_costmap:
     ros__parameters:
       update_frequency: 5.0
@@ -222,7 +222,7 @@ local_costmap:
         map_subscribe_transient_local: True
       always_send_full_costmap: True
 
-global_costmap:
+/TB3_1/global_costmap:
   global_costmap:
     ros__parameters:
       update_frequency: 5.0
@@ -257,14 +257,14 @@ global_costmap:
         inflation_radius: 2.0
       always_send_full_costmap: True
 
-map_server:
+/TB3_1/map_server:
   ros__parameters:
     use_sim_time: True
     # Overridden in launch by the "map" launch configuration or provided default value.
     # To use in yaml, remove the default "map" value in the tb3_simulation_launch.py file & provide full path to map below.
     yaml_filename: ""
 
-map_saver:
+/TB3_1/map_saver:
   ros__parameters:
     use_sim_time: True
     save_map_timeout: 5.0
@@ -272,7 +272,7 @@ map_saver:
     occupied_thresh_default: 0.65
     map_subscribe_transient_local: True
 
-planner_server:
+/TB3_1/planner_server:
   ros__parameters:
     expected_planner_frequency: 20.0
     use_sim_time: True
@@ -318,11 +318,11 @@ behavior_server:
     min_rotational_vel: 0.4
     rotational_acc_lim: 3.2
 
-robot_state_publisher:
+/TB3_1/robot_state_publisher:
   ros__parameters:
     use_sim_time: True
 
-waypoint_follower:
+/TB3_1/waypoint_follower:
   ros__parameters:
     use_sim_time: True
     loop_rate: 20
@@ -333,7 +333,7 @@ waypoint_follower:
       enabled: True
       waypoint_pause_duration: 200
 
-velocity_smoother:
+/TB3_1/velocity_smoother:
   ros__parameters:
     use_sim_time: True
     smoothing_frequency: 20.0
