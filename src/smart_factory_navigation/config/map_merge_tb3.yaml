@@ -3,7 +3,6 @@ map_merge:
     use_sim_time: true
 
     merged_map_topic: /map
-
     world_frame: map
 
     robot_map_topic: map

@@ -12,8 +12,6 @@ module smart_factory_fleet_msgs {
 
       string task_id;
 
-      @verbatim (language="comment", text=
-        "e.g. \"pickup_dropoff\"")
       string type;
 
       int32 priority;
@@ -22,12 +20,8 @@ module smart_factory_fleet_msgs {
 
       geometry_msgs::msg::PoseStamped dropoff_pose;
 
-      @verbatim (language="comment", text=
-        "empty if unassigned")
       string assigned_robot;
 
-      @verbatim (language="comment", text=
-        "\"queued\"|\"assigned\"|\"enroute_pickup\"|\"enroute_dropoff\"|\"done\"|\"failed\"")
       string status;
     };
   };

@@ -17,9 +17,6 @@ def generate_launch_description():
             # Force Nav2 to use GLOBAL TF topics (so it can see slam_toolbox/map frames)
             SetRemap(src='/TB3_1/tf', dst='/tf'),
             SetRemap(src='/TB3_1/tf_static', dst='/tf_static'),
-            # (optional but harmless)
-            SetRemap(src='tf', dst='/tf'),
-            SetRemap(src='tf_static', dst='/tf_static'),
 
             SetParameter(name='robot_base_frame', value='TB3_1/base_link'),
             SetParameter(name='global_frame', value='TB3_1/odom'),

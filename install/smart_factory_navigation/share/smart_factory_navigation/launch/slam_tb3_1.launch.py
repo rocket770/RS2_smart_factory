@@ -3,7 +3,7 @@ from launch_ros.actions import Node, PushRosNamespace
 
 def generate_launch_description():
     return LaunchDescription([
-        PushRosNamespace('TB3_1'),
+        PushRosNamespace('tb1'),
 
         Node(
             package='slam_toolbox',
@@ -14,13 +14,11 @@ def generate_launch_description():
                 'use_sim_time': True,
                 'mode': 'mapping',
                 'map_frame': 'map',
-                'odom_frame': 'TB3_1/odom',
-                'base_frame': 'TB3_1/base_footprint',
-                'scan_topic': '/TB3_1/scan',
+                'odom_frame': 'tb1/odom',
+                'base_frame': 'tb1/base_footprint',
+                'scan_topic': '/tb1/scan',
                 'tf_buffer_duration': 30.0
-            }],
-
-            # Force maps to be namespaced (relative topic names)
+            }],        
             remappings=[
                 ('/map', 'map'),
                 ('/map_metadata', 'map_metadata'),

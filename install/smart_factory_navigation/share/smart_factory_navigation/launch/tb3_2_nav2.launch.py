@@ -12,10 +12,7 @@ def generate_launch_description():
     return LaunchDescription([
         GroupAction([
             PushRosNamespace('TB3_2'),
-
-            SetRemap(src='/TB3_2/tf', dst='/tf'),
-            SetRemap(src='/TB3_2/tf_static', dst='/tf_static'),
-
+            
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(nav2_launch),
                 launch_arguments={

@@ -31,12 +31,9 @@ extern "C"
 typedef struct smart_factory_fleet_msgs__msg__RobotState
 {
   builtin_interfaces__msg__Time stamp;
-  /// "robot1"
   rosidl_runtime_c__String robot_name;
-  /// "idle"|"busy"|"waiting"|"fault"
   rosidl_runtime_c__String status;
   geometry_msgs__msg__PoseStamped pose;
-  /// 0..1, optional
   float battery;
   rosidl_runtime_c__String current_task_id;
 } smart_factory_fleet_msgs__msg__RobotState;

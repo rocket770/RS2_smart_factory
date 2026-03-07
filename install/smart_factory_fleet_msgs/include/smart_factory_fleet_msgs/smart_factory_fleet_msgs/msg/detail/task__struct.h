@@ -34,14 +34,11 @@ typedef struct smart_factory_fleet_msgs__msg__Task
 {
   builtin_interfaces__msg__Time stamp;
   rosidl_runtime_c__String task_id;
-  /// e.g. "pickup_dropoff"
   rosidl_runtime_c__String type;
   int32_t priority;
   geometry_msgs__msg__PoseStamped pickup_pose;
   geometry_msgs__msg__PoseStamped dropoff_pose;
-  /// empty if unassigned
   rosidl_runtime_c__String assigned_robot;
-  /// "queued"|"assigned"|"enroute_pickup"|"enroute_dropoff"|"done"|"failed"
   rosidl_runtime_c__String status;
 } smart_factory_fleet_msgs__msg__Task;
 

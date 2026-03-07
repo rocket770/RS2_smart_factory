@@ -10,18 +10,12 @@ module smart_factory_fleet_msgs {
     struct RobotState {
       builtin_interfaces::msg::Time stamp;
 
-      @verbatim (language="comment", text=
-        "\"robot1\"")
       string robot_name;
 
-      @verbatim (language="comment", text=
-        "\"idle\"|\"busy\"|\"waiting\"|\"fault\"")
       string status;
 
       geometry_msgs::msg::PoseStamped pose;
 
-      @verbatim (language="comment", text=
-        "0..1, optional")
       float battery;
 
       string current_task_id;
