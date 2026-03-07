@@ -1,12 +1,14 @@
-<?xml version="1.0" ?>
-<sdf version="1.5">
-  <model name="turtlebot3_waffle">  
-  <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+<?xml version="1.0"?>
+<sdf version="1.5" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="robot_ns" default="tb1"/>
+  <xacro:arg name="robot_name" default="turtlebot3_waffle"/>
+
+  <model name="$(arg robot_name)">
+    <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
 
     <link name="base_footprint"/>
 
     <link name="base_link">
-
       <inertial>
         <pose>-0.064 0 0.048 0 0 0</pose>
         <inertia>
@@ -88,14 +90,14 @@
         </imu>
         <plugin name="turtlebot3_imu" filename="libgazebo_ros_imu_sensor.so">
           <ros>
-            <!-- <namespace>/tb3</namespace> -->
+            <namespace>/$(arg robot_ns)</namespace>
             <remapping>~/out:=imu</remapping>
           </ros>
         </plugin>
       </sensor>
     </link>
 
-    <link name="base_scan">    
+    <link name="base_scan">
       <inertial>
         <pose>-0.052 0 0.111 0 0 0</pose>
         <inertia>
@@ -156,7 +158,7 @@
         </ray>
         <plugin name="turtlebot3_laserscan" filename="libgazebo_ros_ray_sensor.so">
           <ros>
-            <!-- <namespace>/tb3</namespace> -->
+            <namespace>/$(arg robot_ns)</namespace>
             <remapping>~/out:=scan</remapping>
           </ros>
           <output_type>sensor_msgs/LaserScan</output_type>
@@ -166,7 +168,6 @@
     </link>
 
     <link name="wheel_left_link">
-
       <inertial>
         <pose>0.0 0.144 0.023 -1.57 0 0</pose>
         <inertia>
@@ -189,7 +190,6 @@
           </cylinder>
         </geometry>
         <surface>
-          <!-- This friction pamareter don't contain reliable data!! -->
           <friction>
             <ode>
               <mu>100000.0</mu>
@@ -224,7 +224,6 @@
     </link>
 
     <link name="wheel_right_link">
-
       <inertial>
         <pose>0.0 -0.144 0.023 -1.57 0 0</pose>
         <inertia>
@@ -237,7 +236,7 @@
         </inertia>
         <mass>0.1</mass>
       </inertial>
-    
+
       <collision name="wheel_right_collision">
         <pose>0.0 -0.144 0.023 -1.57 0 0</pose>
         <geometry>
@@ -247,7 +246,6 @@
           </cylinder>
         </geometry>
         <surface>
-          <!-- This friction pamareter don't contain reliable data!! -->
           <friction>
             <ode>
               <mu>100000.0</mu>
@@ -281,7 +279,7 @@
       </visual>
     </link>
 
-    <link name='caster_back_right_link'>
+    <link name="caster_back_right_link">
       <pose>-0.177 -0.064 -0.004 -1.57 0 0</pose>
       <inertial>
         <mass>0.001</mass>
@@ -294,7 +292,7 @@
           <izz>0.00001</izz>
         </inertia>
       </inertial>
-      <collision name='collision'>
+      <collision name="collision">
         <geometry>
           <sphere>
             <radius>0.005000</radius>
@@ -315,7 +313,7 @@
       </collision>
     </link>
 
-    <link name='caster_back_left_link'>
+    <link name="caster_back_left_link">
       <pose>-0.177 0.064 -0.004 -1.57 0 0</pose>
       <inertial>
         <mass>0.001</mass>
@@ -328,7 +326,7 @@
           <izz>0.00001</izz>
         </inertia>
       </inertial>
-      <collision name='collision'>
+      <collision name="collision">
         <geometry>
           <sphere>
             <radius>0.005000</radius>
@@ -367,68 +365,37 @@
 
       <pose>0.069 -0.047 0.107 0 0 0</pose>
       <sensor name="camera" type="depth">
-       <pose> 0 0 0 0 0 0 </pose>
+        <pose>0 0 0 0 0 0</pose>
         <always_on>true</always_on>
         <visualize>true</visualize>
         <update_rate>1</update_rate>
         <camera name="intel_realsense_r200">
-           <horizontal_fov>1.02974</horizontal_fov>
+          <horizontal_fov>1.02974</horizontal_fov>
           <image>
             <width>640</width>
             <height>480</height>
             <format>B8G8R8</format>
           </image>
           <clip>
-               <near>0.05</near>
-               <far>8.0</far>
+            <near>0.05</near>
+            <far>8.0</far>
           </clip>
           <noise>
             <type>gaussian</type>
-
             <mean>0.0</mean>
             <stddev>0.007</stddev>
           </noise>
         </camera>
-          <plugin name="camera_driver" filename="libgazebo_ros_camera.so">
-            <ros>
-            </ros>
+        <plugin name="camera_driver" filename="libgazebo_ros_camera.so">
+          <ros>
+            <namespace>/$(arg robot_ns)</namespace>
+          </ros>
           <frame_name>camera_rgb_frame</frame_name>
           <min_depth>0.1</min_depth>
           <max_depth>100</max_depth>
-
-          </plugin>
+        </plugin>
       </sensor>
     </link>
-
-    
-<!--
-  <link name="turtlebot3_wall1">
-      <visual name="turtlebot3_wall1_visual">>
-        <pose>-0.0 0 0 0 0 0</pose>
-        <geometry>
-         <box>
-            <size>0.25 0.25 0.005</size>
-         </box>
-        </geometry>
-
-        <material>Gazebo/Red</material>
-      </visual>
-      <collision name="turtlebot3_wall1_collision">
-        <pose>-0.0 0 .0 0 0 0</pose>
-        <geometry>
-          <box>
-            <size>0.25 0.25 0.005</size>
-         </box>
-        </geometry>
-      </collision>
-    </link>
-
-  <joint name="turtlebot3_wall1_joint" type="fixed">
-    <parent>turtlebot3_tray</parent>
-      <child>turtlebot3_wall1</child>
-    <pose>0.0 0.0 0.0 1.57 1.57 0</pose>
-  </joint>
-  -->
 
     <joint name="base_joint" type="fixed">
       <parent>base_footprint</parent>
@@ -453,12 +420,12 @@
       </axis>
     </joint>
 
-    <joint name='caster_back_right_joint' type='ball'>
+    <joint name="caster_back_right_joint" type="ball">
       <parent>base_link</parent>
       <child>caster_back_right_link</child>
     </joint>
 
-    <joint name='caster_back_left_joint' type='ball'>
+    <joint name="caster_back_left_joint" type="ball">
       <parent>base_link</parent>
       <child>caster_back_left_link</child>
     </joint>
@@ -470,7 +437,7 @@
       <axis>
         <xyz>0 0 1</xyz>
       </axis>
-    </joint>    
+    </joint>
 
     <joint name="lidar_joint" type="fixed">
       <parent>base_link</parent>
@@ -500,8 +467,8 @@
     </joint>
 
     <plugin name="turtlebot3_diff_drive" filename="libgazebo_ros_diff_drive.so">
-
       <ros>
+        <namespace>/$(arg robot_ns)</namespace>
         <remapping>/tf:=tf</remapping>
         <remapping>/tf_static:=tf_static</remapping>
         <remapping>/odom:=odom</remapping>
@@ -527,18 +494,16 @@
       <odometry_topic>odom</odometry_topic>
       <odometry_frame>odom</odometry_frame>
       <robot_base_frame>base_footprint</robot_base_frame>
-
     </plugin>
 
     <plugin name="turtlebot3_joint_state" filename="libgazebo_ros_joint_state_publisher.so">
       <ros>
-        <!-- <namespace>/tb3</namespace> -->
+        <namespace>/$(arg robot_ns)</namespace>
         <remapping>~/out:=joint_states</remapping>
       </ros>
       <update_rate>30</update_rate>
       <joint_name>wheel_left_joint</joint_name>
       <joint_name>wheel_right_joint</joint_name>
-    </plugin>    
-
+    </plugin>
   </model>
 </sdf>

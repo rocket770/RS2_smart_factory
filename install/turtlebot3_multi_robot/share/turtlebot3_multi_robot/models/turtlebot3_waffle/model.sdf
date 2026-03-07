@@ -502,8 +502,10 @@
     <plugin name="turtlebot3_diff_drive" filename="libgazebo_ros_diff_drive.so">
 
       <ros>
-        <!-- <namespace>/robot0</namespace> -->
         <remapping>/tf:=tf</remapping>
+        <remapping>/tf_static:=tf_static</remapping>
+        <remapping>/odom:=odom</remapping>
+        <remapping>/cmd_vel:=cmd_vel</remapping>
       </ros>
 
       <update_rate>30</update_rate>
