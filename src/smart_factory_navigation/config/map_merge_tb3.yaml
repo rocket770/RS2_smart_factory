@@ -8,10 +8,9 @@ map_merge:
     robot_map_topic: map
     robot_map_updates_topic: map_updates
 
-    merging_rate: 2.0
-    discovery_rate: 0.2
-    estimation_rate: 1
-    estimation_confidence: 0.5
+    merging_rate: 8.0
+    discovery_rate: 2.0
+    estimation_rate: 8.0
+    estimation_confidence: 0.4
 
     known_init_poses: false
-
