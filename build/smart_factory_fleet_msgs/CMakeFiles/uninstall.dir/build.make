@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/nick/smart_factory_ws/src/smart_factory_fleet_msgs
+CMAKE_SOURCE_DIR = /home/nick/RS2_smart_factory/src/smart_factory_fleet_msgs
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/nick/smart_factory_ws/build/smart_factory_fleet_msgs
+CMAKE_BINARY_DIR = /home/nick/RS2_smart_factory/build/smart_factory_fleet_msgs
 
 # Utility rule file for uninstall.
 
@@ -78,6 +78,6 @@ CMakeFiles/uninstall.dir/clean:
 .PHONY : CMakeFiles/uninstall.dir/clean
 
 CMakeFiles/uninstall.dir/depend:
-	cd /home/nick/smart_factory_ws/build/smart_factory_fleet_msgs && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/nick/smart_factory_ws/src/smart_factory_fleet_msgs /home/nick/smart_factory_ws/src/smart_factory_fleet_msgs /home/nick/smart_factory_ws/build/smart_factory_fleet_msgs /home/nick/smart_factory_ws/build/smart_factory_fleet_msgs /home/nick/smart_factory_ws/build/smart_factory_fleet_msgs/CMakeFiles/uninstall.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/nick/RS2_smart_factory/build/smart_factory_fleet_msgs && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/nick/RS2_smart_factory/src/smart_factory_fleet_msgs /home/nick/RS2_smart_factory/src/smart_factory_fleet_msgs /home/nick/RS2_smart_factory/build/smart_factory_fleet_msgs /home/nick/RS2_smart_factory/build/smart_factory_fleet_msgs /home/nick/RS2_smart_factory/build/smart_factory_fleet_msgs/CMakeFiles/uninstall.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/uninstall.dir/depend
 
