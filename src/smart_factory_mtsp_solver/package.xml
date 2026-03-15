@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>smart_factory_mtsp_solver</name>
+  <version>0.0.1</version>
+  <description>MTSP yuh ay.</description>
+
+  <maintainer email="Nicholas.Surmon@student.uts.edu.au">Nick</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

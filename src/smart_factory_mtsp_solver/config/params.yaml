@@ -1,0 +1,25 @@
+mtsp_solver_node:
+  ros__parameters:
+    robot_starts: [
+      5.0, 0.0,
+      1.5, 0.0
+    ]
+
+    goals: [
+      1.0, 1.0,
+      2.5, 2.5,
+      5.0, 3.0,
+      6.0, 1.0,
+      10.0, 5.0,
+      12.0, 7.0,
+      8.0, 4.0,
+      9.0, 6.0
+    ]
+
+    population_size: 150
+    generations: 3000
+    mutation_rate: 0.2
+    seed: 42
+
+    publish_progress: true
+    generation_delay_ms: 0
