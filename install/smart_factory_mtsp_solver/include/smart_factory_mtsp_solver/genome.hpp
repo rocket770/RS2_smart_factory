@@ -22,6 +22,7 @@ public:
 private:
   void mutate_goal_order(std::mt19937 & rng);
   void mutate_route_sizes(std::mt19937 & rng);
+  void repair_route_sizes(int total_goals);
 };
 
 }  // namespace smart_factory_mtsp_solver

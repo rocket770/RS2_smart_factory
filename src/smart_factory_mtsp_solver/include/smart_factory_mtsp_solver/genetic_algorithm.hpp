@@ -18,9 +18,16 @@ struct GAParams
   int generations;
   double mutation_rate;
   unsigned int seed;
+  double unused_robot_penalty;
+  double route_count_balance_penalty;
 
   GAParams()
-  : population_size(100), generations(200), mutation_rate(0.10), seed(42U)
+  : population_size(100),
+    generations(200),
+    mutation_rate(0.10),
+    seed(42U),
+    unused_robot_penalty(0.0),
+    route_count_balance_penalty(0.0)
   {
   }
 };

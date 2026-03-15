@@ -21,7 +21,12 @@ public:
     int num_robots,
     std::mt19937 & rng);
 
-  void evaluate_all(const ProblemData & problem, const DistanceMatrix & distance_matrix);
+  void evaluate_all(
+    const ProblemData & problem,
+    const DistanceMatrix & distance_matrix,
+    double unused_robot_penalty,
+    double route_count_balance_penalty);
+
   void set_best();
   Individual get_best() const;
 
@@ -29,7 +34,9 @@ public:
     std::mt19937 & rng,
     const ProblemData & problem,
     const DistanceMatrix & distance_matrix,
-    double mutation_rate);
+    double mutation_rate,
+    double unused_robot_penalty,
+    double route_count_balance_penalty);
 
   int generation;
 

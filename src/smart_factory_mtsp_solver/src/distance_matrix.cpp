@@ -1,7 +1,7 @@
 #include "../include/smart_factory_mtsp_solver/distance_matrix.hpp"
 
 #include <cmath>
-#include <stdexcept>
+#include <vector>
 
 namespace smart_factory_mtsp_solver
 {
@@ -22,6 +22,7 @@ DistanceMatrix::DistanceMatrix()
 {
 }
 
+// initally build up all distances once at the start - saves doing multiple duplicate calls throughout
 void DistanceMatrix::build_euclidean(const ProblemData & problem)
 {
   const std::size_t num_robots = problem.robot_starts.size();

@@ -18,7 +18,12 @@ public:
 
   Individual();
 
-  void evaluate(const ProblemData & problem, const DistanceMatrix & distance_matrix);
+  void evaluate(
+    const ProblemData & problem,
+    const DistanceMatrix & distance_matrix,
+    double unused_robot_penalty,
+    double route_count_balance_penalty);
+
   std::vector<std::vector<int> > decode_routes(std::size_t robot_count) const;
 };
 

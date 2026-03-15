@@ -1,5 +1,5 @@
-#include "rclcpp/rclcpp.hpp"
 #include "../include/smart_factory_mtsp_solver/mtsp_solver_node.hpp"
+#include "rclcpp/rclcpp.hpp"
 
 int main(int argc, char ** argv)
 {

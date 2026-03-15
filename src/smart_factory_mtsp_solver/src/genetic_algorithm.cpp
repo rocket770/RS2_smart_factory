@@ -25,7 +25,11 @@ Solution GeneticAlgorithm::solve(
     static_cast<int>(problem.robot_count()),
     rng_);
 
-  population.evaluate_all(problem, distance_matrix);
+  population.evaluate_all(
+    problem,
+    distance_matrix,
+    params.unused_robot_penalty,
+    params.route_count_balance_penalty);
   population.set_best();
 
   if (progress_callback) {
@@ -40,8 +44,19 @@ Solution GeneticAlgorithm::solve(
   }
 
   for (int generation = 0; generation < params.generations; ++generation) {
-    population.evolve(rng_, problem, distance_matrix, params.mutation_rate);
-    population.evaluate_all(problem, distance_matrix);
+    population.evolve(
+      rng_,
+      problem,
+      distance_matrix,
+      params.mutation_rate,
+      params.unused_robot_penalty,
+      params.route_count_balance_penalty);
+
+    population.evaluate_all(
+      problem,
+      distance_matrix,
+      params.unused_robot_penalty,
+      params.route_count_balance_penalty);
     population.set_best();
 
     if (progress_callback) {
@@ -56,7 +71,11 @@ Solution GeneticAlgorithm::solve(
     }
   }
 
-  population.evaluate_all(problem, distance_matrix);
+  population.evaluate_all(
+    problem,
+    distance_matrix,
+    params.unused_robot_penalty,
+    params.route_count_balance_penalty);
   population.set_best();
 
   const Individual best = population.get_best();
