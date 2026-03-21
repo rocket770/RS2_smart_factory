@@ -8,10 +8,18 @@
 #include "problem_data.hpp"
 #include "distance_matrix.hpp"
 #include "population.hpp"
+#include "path_cost_provider.hpp"
 
 namespace smart_factory_mtsp_solver
 {
 
+enum class DistanceBackend
+{
+  EUCLIDEAN = 0,
+  NAV2 = 1
+};
+  
+  
 struct GAParams
 {
   int population_size;
@@ -20,6 +28,7 @@ struct GAParams
   unsigned int seed;
   double unused_robot_penalty;
   double route_count_balance_penalty;
+  DistanceBackend distance_backend;
 
   GAParams()
   : population_size(100),
@@ -27,7 +36,8 @@ struct GAParams
     mutation_rate(0.10),
     seed(42U),
     unused_robot_penalty(0.0),
-    route_count_balance_penalty(0.0)
+    route_count_balance_penalty(0.0),
+    distance_backend(DistanceBackend::EUCLIDEAN)
   {
   }
 };
@@ -55,7 +65,8 @@ public:
   Solution solve(
     const ProblemData & problem,
     const GAParams & params,
-    ProgressCallback progress_callback = ProgressCallback());
+    ProgressCallback progress_callback = ProgressCallback(),
+    PathCostProvider * path_cost_provider = nullptr);
 
 private:
   std::mt19937 rng_;

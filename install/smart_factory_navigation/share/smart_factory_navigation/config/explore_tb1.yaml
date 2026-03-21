@@ -1,0 +1,7 @@
+/**:
+  ros__parameters:
+    use_sim_time: true
+    robot_base_frame: tb1/base_footprint
+    global_frame: tb1/map
+    costmap_topic: /tb1/global_costmap/costmap
+    costmap_updates_topic: /tb1/global_costmap/costmap_updates

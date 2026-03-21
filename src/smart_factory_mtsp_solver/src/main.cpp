@@ -7,7 +7,10 @@ int main(int argc, char ** argv)
 
   try {
     auto node = std::make_shared<smart_factory_mtsp_solver::MtspSolverNode>();
-    rclcpp::spin(node);
+
+    rclcpp::executors::MultiThreadedExecutor executor;
+    executor.add_node(node);
+    executor.spin();
   } catch (const std::exception & e) {
     fprintf(stderr, "Exception: %s\n", e.what());
   }
