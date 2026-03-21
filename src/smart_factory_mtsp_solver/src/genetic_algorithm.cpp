@@ -1,4 +1,7 @@
 #include "../include/smart_factory_mtsp_solver/genetic_algorithm.hpp"
+#include <stdexcept>
+#include <memory>
+#include <iostream>
 
 namespace smart_factory_mtsp_solver
 {
@@ -11,12 +14,30 @@ GeneticAlgorithm::GeneticAlgorithm()
 Solution GeneticAlgorithm::solve(
   const ProblemData & problem,
   const GAParams & params,
-  ProgressCallback progress_callback)
+  ProgressCallback progress_callback,
+  PathCostProvider * path_cost_provider)
 {
   rng_.seed(params.seed);
 
   DistanceMatrix distance_matrix;
-  distance_matrix.build_euclidean(problem);
+
+  switch (params.distance_backend) {
+    case DistanceBackend::EUCLIDEAN:
+      distance_matrix.build_euclidean(problem);
+      break;
+
+    case DistanceBackend::NAV2:
+      if (path_cost_provider == nullptr) {
+        throw std::runtime_error(
+          "NAV2 distance backend selected, but path_cost_provider was nullptr");
+      }
+      distance_matrix.build_from_provider(problem, *path_cost_provider);
+      break;
+
+    default:
+      throw std::runtime_error("Unknown distance backend");
+  }
+
 
   Population population;
   population.initialize(

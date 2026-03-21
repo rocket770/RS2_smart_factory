@@ -22,7 +22,7 @@ DistanceMatrix::DistanceMatrix()
 {
 }
 
-// initally build up all distances once at the start - saves doing multiple duplicate calls throughout
+// initially build up all distances once at the start - saves doing multiple duplicate calls throughout
 void DistanceMatrix::build_euclidean(const ProblemData & problem)
 {
   const std::size_t num_robots = problem.robot_starts.size();
@@ -44,14 +44,41 @@ void DistanceMatrix::build_euclidean(const ProblemData & problem)
   }
 }
 
+void DistanceMatrix::build_from_provider(const ProblemData & problem, PathCostProvider & provider)
+{
+  const std::size_t num_robots = problem.robot_starts.size();
+  const std::size_t num_goals = problem.goals.size();
+
+  robot_to_goal_.assign(num_robots, std::vector<double>(num_goals, 0.0));
+  goal_to_goal_.assign(num_goals, std::vector<double>(num_goals, 0.0));
+
+  for (std::size_t r = 0; r < num_robots; ++r) {
+    for (std::size_t g = 0; g < num_goals; ++g) {
+      robot_to_goal_[r][g] = provider.compute_cost(problem.robot_starts[r], problem.goals[g]);
+    }
+  }
+
+  for (std::size_t i = 0; i < num_goals; ++i) {
+    for (std::size_t j = 0; j < num_goals; ++j) {
+      if (i == j) {
+        goal_to_goal_[i][j] = 0.0;
+      } else {
+        goal_to_goal_[i][j] = provider.compute_cost(problem.goals[i], problem.goals[j]);
+      }
+    }
+  }
+}
+
 double DistanceMatrix::robot_to_goal(int robot_index, int goal_index) const
 {
-  return robot_to_goal_.at(static_cast<std::size_t>(robot_index)).at(static_cast<std::size_t>(goal_index));
+  return robot_to_goal_.at(static_cast<std::size_t>(robot_index)).at(
+    static_cast<std::size_t>(goal_index));
 }
 
 double DistanceMatrix::goal_to_goal(int from_goal_index, int to_goal_index) const
 {
-  return goal_to_goal_.at(static_cast<std::size_t>(from_goal_index)).at(static_cast<std::size_t>(to_goal_index));
+  return goal_to_goal_.at(static_cast<std::size_t>(from_goal_index)).at(
+    static_cast<std::size_t>(to_goal_index));
 }
 
 }  // namespace smart_factory_mtsp_solver
