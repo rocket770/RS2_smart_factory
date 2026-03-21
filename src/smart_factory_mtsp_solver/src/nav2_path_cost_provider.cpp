@@ -104,6 +104,7 @@ double Nav2PathCostProvider::compute_path_length(const nav_msgs::msg::Path & pat
   return total;
 }
 
+// Fair note I used chatgpt here to generate the debugging messages - nick
 double Nav2PathCostProvider::compute_cost(const Point2D & start, const Point2D & goal)
 {
   std::lock_guard<std::mutex> lock(request_mutex_);
