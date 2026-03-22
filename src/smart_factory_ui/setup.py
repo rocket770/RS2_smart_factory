@@ -15,12 +15,13 @@ setup(
     zip_safe=True,
     maintainer='nick',
     maintainer_email='skrillx789@hotmail.com',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    description='Smart Factory UI package',
+    license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'add_task_cli = smart_factory_ui.add_task_cli:main',
+            'smart_factory_gui = smart_factory_ui.main:main',
         ],
     },
 )
