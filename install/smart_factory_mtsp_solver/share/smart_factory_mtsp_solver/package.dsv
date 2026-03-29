@@ -1,8 +1,0 @@
-source;share/smart_factory_mtsp_solver/hook/cmake_prefix_path.ps1
-source;share/smart_factory_mtsp_solver/hook/cmake_prefix_path.dsv
-source;share/smart_factory_mtsp_solver/hook/cmake_prefix_path.sh
-source;share/smart_factory_mtsp_solver/local_setup.bash
-source;share/smart_factory_mtsp_solver/local_setup.dsv
-source;share/smart_factory_mtsp_solver/local_setup.ps1
-source;share/smart_factory_mtsp_solver/local_setup.sh
-source;share/smart_factory_mtsp_solver/local_setup.zsh
