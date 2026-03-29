@@ -1,0 +1,10 @@
+merge_map:
+  ros__parameters:
+    use_sim_time: true
+    map_topic_regex: "^/tb\\d+/map$"
+    publish_topic: "/map"
+    scan_period_sec: 2.0
+    merged_frame_id: "map"
+    unknown_value: -1
+    occupied_threshold: 50
+    overwrite_known_cells: true
