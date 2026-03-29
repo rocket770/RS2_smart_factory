@@ -36,6 +36,7 @@ class FrontierAssignmentCandidate:
     frontier: Frontier
     goal_xy: Tuple[float, float]
     goal_distance: float
+    cluster_distance: float
     score: float
 
 
@@ -193,6 +194,7 @@ class MultiRobotExplorer(Node):
         self.declare_parameter('cancel_goals_on_pause', False)
         self.declare_parameter('score_distance_weight', 1.0)
         self.declare_parameter('score_size_weight', 0.15)
+        self.declare_parameter('score_home_bias_weight', 0.25)
         self.declare_parameter('enable_rviz_markers', True)
         self.declare_parameter('marker_topic', '~/markers')
         self.declare_parameter('marker_lifetime_sec', 1.5)
@@ -218,6 +220,7 @@ class MultiRobotExplorer(Node):
         self.cancel_goals_on_pause = bool(self.get_parameter('cancel_goals_on_pause').value)
         self.score_distance_weight = float(self.get_parameter('score_distance_weight').value)
         self.score_size_weight = float(self.get_parameter('score_size_weight').value)
+        self.score_home_bias_weight = float(self.get_parameter('score_home_bias_weight').value)
         self.enable_rviz_markers = bool(self.get_parameter('enable_rviz_markers').value)
         self.marker_topic = self.get_parameter('marker_topic').value
         self.marker_lifetime_sec = float(self.get_parameter('marker_lifetime_sec').value)
@@ -387,17 +390,16 @@ class MultiRobotExplorer(Node):
             if robot.assigned_goal is not None
         ]
 
-        for robot in idle_robots:
-            candidate = self._choose_frontier_for_robot(robot, available_frontiers, reserved_points)
-            if candidate is None:
-                continue
+        chosen_candidates = self._choose_frontiers_globally(idle_robots, available_frontiers, reserved_points)
+        chosen_frontier_ids = set()
+        for robot, candidate in chosen_candidates:
+            chosen_frontier_ids.add(candidate.frontier.frontier_id)
             self._dispatch_goal(robot, candidate.frontier, candidate.goal_xy)
-            reserved_points.append(candidate.goal_xy)
-            available_frontiers = [
-                f for f in available_frontiers
-                if self._distance_xy(f.centroid_world, candidate.frontier.centroid_world) >= self.min_frontier_separation_m
-            ]
-        self.latest_available_frontiers = list(available_frontiers)
+
+        self.latest_available_frontiers = [
+            frontier for frontier in available_frontiers
+            if frontier.frontier_id not in chosen_frontier_ids
+        ]
         self._publish_debug_markers()
 
     def _publish_debug_markers(self) -> None:
@@ -731,27 +733,74 @@ class MultiRobotExplorer(Node):
             return None
         return goal_xy, dist
 
-    def _choose_frontier_for_robot(self, robot: RobotHandle, frontiers: List[Frontier],
-                                   reserved_points: List[Tuple[float, float]]) -> Optional[FrontierAssignmentCandidate]:
+    def _build_candidate_for_robot_frontier(self, robot: RobotHandle, frontier: Frontier,
+                                            reserved_points: List[Tuple[float, float]]) -> Optional[FrontierAssignmentCandidate]:
         if robot.last_pose_xy is None:
             return None
-        candidates: List[FrontierAssignmentCandidate] = []
-        for frontier in frontiers:
-            if any(self._distance_xy(frontier.centroid_world, rp) < self.min_frontier_separation_m for rp in reserved_points):
-                continue
-            selected = self._choose_goal_point_for_frontier(robot, frontier)
-            if selected is None:
-                continue
-            goal_xy, goal_distance = selected
-            if any(self._distance_xy(goal_xy, rp) < self.min_frontier_separation_m for rp in reserved_points):
-                continue
-            score = self.score_distance_weight * goal_distance - self.score_size_weight * frontier.size
-            candidates.append(FrontierAssignmentCandidate(frontier, goal_xy, goal_distance, score))
-        if not candidates:
+        if any(self._distance_xy(frontier.centroid_world, rp) < self.min_frontier_separation_m for rp in reserved_points):
             return None
-        far_enough = [c for c in candidates if c.goal_distance >= self.min_goal_distance_m]
-        pool = far_enough if far_enough else candidates
-        return min(pool, key=lambda c: c.score)
+        selected = self._choose_goal_point_for_frontier(robot, frontier)
+        if selected is None:
+            return None
+        goal_xy, goal_distance = selected
+        if any(self._distance_xy(goal_xy, rp) < self.min_frontier_separation_m for rp in reserved_points):
+            return None
+
+        cluster_distance = self._distance_xy(robot.last_pose_xy, frontier.centroid_world)
+        size_bonus = self.score_size_weight * frontier.size
+        home_bias_penalty = self._home_bias_penalty(robot, frontier)
+        score = self.score_distance_weight * cluster_distance + home_bias_penalty - size_bonus
+        return FrontierAssignmentCandidate(frontier, goal_xy, goal_distance, cluster_distance, score)
+
+    def _home_bias_penalty(self, robot: RobotHandle, frontier: Frontier) -> float:
+        if robot.home_pose_xy is None or self.score_home_bias_weight <= 0.0:
+            return 0.0
+        own_home_dist = self._distance_xy(robot.home_pose_xy, frontier.centroid_world)
+        other_home_dists = [
+            self._distance_xy(other.home_pose_xy, frontier.centroid_world)
+            for other in self.robots.values()
+            if other.namespace != robot.namespace and other.home_pose_xy is not None
+        ]
+        if not other_home_dists:
+            return 0.0
+        nearest_other = min(other_home_dists)
+        return max(0.0, own_home_dist - nearest_other) * self.score_home_bias_weight
+
+    def _choose_frontiers_globally(self, idle_robots: List[RobotHandle], frontiers: List[Frontier],
+                                   reserved_points: List[Tuple[float, float]]) -> List[Tuple[RobotHandle, FrontierAssignmentCandidate]]:
+        pair_candidates: List[Tuple[RobotHandle, FrontierAssignmentCandidate]] = []
+        for robot in idle_robots:
+            robot_candidates: List[FrontierAssignmentCandidate] = []
+            for frontier in frontiers:
+                candidate = self._build_candidate_for_robot_frontier(robot, frontier, reserved_points)
+                if candidate is not None:
+                    robot_candidates.append(candidate)
+            if not robot_candidates:
+                continue
+            far_enough = [c for c in robot_candidates if c.goal_distance >= self.min_goal_distance_m]
+            pair_candidates.extend((robot, c) for c in (far_enough if far_enough else robot_candidates))
+
+        chosen: List[Tuple[RobotHandle, FrontierAssignmentCandidate]] = []
+        used_robots: Set[str] = set()
+        used_frontiers: Set[int] = set()
+        dynamic_reserved = list(reserved_points)
+
+        for robot, candidate in sorted(pair_candidates, key=lambda item: (item[1].score, item[1].cluster_distance, -item[1].frontier.size)):
+            if robot.namespace in used_robots:
+                continue
+            if candidate.frontier.frontier_id in used_frontiers:
+                continue
+            if any(self._distance_xy(candidate.goal_xy, rp) < self.min_frontier_separation_m for rp in dynamic_reserved):
+                continue
+            if any(self._distance_xy(candidate.frontier.centroid_world, chosen_candidate.frontier.centroid_world) < self.min_frontier_separation_m
+                   for _, chosen_candidate in chosen):
+                continue
+            chosen.append((robot, candidate))
+            used_robots.add(robot.namespace)
+            used_frontiers.add(candidate.frontier.frontier_id)
+            dynamic_reserved.append(candidate.goal_xy)
+
+        return chosen
 
     def _dispatch_goal(self, robot: RobotHandle, frontier: Frontier, goal_xy: Tuple[float, float]) -> None:
         self._dispatch_pose_goal(robot, goal_xy, frontier.frontier_id, 'frontier')
