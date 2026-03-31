@@ -7,7 +7,7 @@ bt_navigator:
     enable_groot_monitoring: False
     groot_zmq_publisher_port: 1666
     groot_zmq_server_port: 1667
-    default_bt_xml_filename: "navigate_w_replanning_and_recovery.xml"
+    default_bt_xml_filename: "navigate_to_pose_w_replanning_and_if_path_becomes_invalid.xml" # "navigate_w_replanning_and_recovery.xml"
     plugin_lib_names:
       - nav2_compute_path_to_pose_action_bt_node
       - nav2_compute_path_through_poses_action_bt_node
@@ -17,7 +17,7 @@ bt_navigator:
       - nav2_wait_action_bt_node
       - nav2_back_up_action_bt_node
       - nav2_drive_on_heading_bt_node
-      - nav2_clear_costmap_service_bt_node
+      - nav2_clear_costmap_service_bt_node # need to clear costmap
       - nav2_is_stuck_condition_bt_node
       - nav2_goal_reached_condition_bt_node
       - nav2_goal_updated_condition_bt_node
@@ -25,6 +25,7 @@ bt_navigator:
       - nav2_is_path_valid_condition_bt_node
       - nav2_initial_pose_received_condition_bt_node
       - nav2_reinitialize_global_localization_service_bt_node
+      # bt_node
       - nav2_rate_controller_bt_node
       - nav2_distance_controller_bt_node
       - nav2_speed_controller_bt_node
@@ -57,26 +58,31 @@ bt_navigator_rclcpp_node:
   ros__parameters:
     use_sim_time: True
 
+
+# Must be able to tell planner to move around obstacle
 controller_server:
   ros__parameters:
     use_sim_time: True
-    controller_frequency: 20.0
+    controller_frequency: 20.0 # 20.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
     progress_checker_plugin: "progress_checker"
+    # Check this one
     goal_checker_plugin: "goal_checker"
     controller_plugins: ["FollowPath"]
 
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.08
+      # originally was 0.5 in 10s
+      # now do in 0.05m in 30secs
+      required_movement_radius: 0.05
       movement_time_allowance: 20.0
 
     goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.25
-      yaw_goal_tolerance: 0.25
+      xy_goal_tolerance: 0.25 #0.35
+      yaw_goal_tolerance: 0.25 #0.35
       stateful: True
 
     FollowPath:
@@ -84,13 +90,13 @@ controller_server:
       debug_trajectory_details: True
       min_vel_x: 0.0
       min_vel_y: 0.0
-      max_vel_x: 0.26
+      max_vel_x: 0.15 # 0.26
       max_vel_y: 0.0
       max_vel_theta: 1.5
       min_speed_xy: 0.0
       max_speed_xy: 0.26
       min_speed_theta: 0.25
-      acc_lim_x: 2.5
+      acc_lim_x: 1.5 #2.5
       acc_lim_y: 0.0
       acc_lim_theta: 3.2
       decel_lim_x: -2.5
@@ -108,13 +114,13 @@ controller_server:
       short_circuit_trajectory_evaluation: True
       stateful: True
       critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
-      BaseObstacle.scale: 0.2
-      PathAlign.scale: 16.0
+      BaseObstacle.scale: 0.5 # 0.2 putting it higher makes it more sensitive to obstacles
+      PathAlign.scale: 8.0 # 16.0
       PathAlign.forward_point_distance: 0.1
-      GoalAlign.scale: 12.0
+      GoalAlign.scale: 6.0 # 12.0
       GoalAlign.forward_point_distance: 0.1
-      PathDist.scale: 24.0
-      GoalDist.scale: 16.0
+      PathDist.scale: 28.0 # was 24.0 # Now a stronger weight applied to obstacles
+      GoalDist.scale: 20.0 # 16.0 
       RotateToGoal.scale: 40.0
       RotateToGoal.slowing_factor: 5.0
       RotateToGoal.lookahead_time: -1.0
@@ -123,12 +129,14 @@ controller_server_rclcpp_node:
   ros__parameters:
     use_sim_time: True
 
+# This should be the main part to quickly check dynamic changes in map
+# costmap not clearing, might be a tf problem
 local_costmap:
   local_costmap:
     ros__parameters:
       use_sim_time: True
-      update_frequency: 5.0
-      publish_frequency: 2.0
+      update_frequency: 20.0 # 5.0
+      publish_frequency: 5.0 # 2.0
       global_frame: odom
       robot_base_frame: base_footprint
       rolling_window: true
@@ -152,14 +160,20 @@ local_costmap:
         scan:
           topic: scan
           max_obstacle_height: 2.0
-          clearing: True
-          marking: True
+          clearing: True #obstacles not present removed from costmap
+          marking: True #obstacles added to map
           data_type: "LaserScan"
+          # raytrace range
+          raytrace_max_range: 3.5
+          raytrace_min_range: 0.0
+          obstacle_max_range: 3.0
+          obstacle_min_range: 0.0
+          inf_is_valid: false # true = infinite treated as obstacles otherwise | false: ignored
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.55
+        cost_scaling_factor: 3.0 # try 10
+        inflation_radius: 0.65 #0.55
 
   local_costmap_client:
     ros__parameters:
@@ -173,8 +187,8 @@ global_costmap:
   global_costmap:
     ros__parameters:
       use_sim_time: True
-      update_frequency: 1.0
-      publish_frequency: 1.0
+      update_frequency: 10.0 # 5.0 # 1.0
+      publish_frequency: 5.0 # 2.0 # 1.0
       global_frame: map
       robot_base_frame: base_footprint
       robot_radius: 0.22
@@ -185,7 +199,7 @@ global_costmap:
 
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
-        map_topic: /map
+        map_topic: /tb1/map
         map_subscribe_transient_local: True
         subscribe_to_updates: True
 
@@ -199,6 +213,19 @@ global_costmap:
           clearing: True
           marking: True
           data_type: "LaserScan"
+          # raytrace clears path from robot's max range
+          # removed obstacles stay permanemtly on ray
+          # ever sweeps through that cell again
+          raytrace_max_range: 3.5
+          raytrace_min_range: 0.0
+          obstacle_max_range: 3.0
+          obstacle_min_range: 0.0
+          inf_is_valid: false # treat range_max as free space to move
+          # mark what the sensor sees 
+          # moving robots OTHER than tb3 will be cleared when they leave scan area
+          observation_persistence: 0.0
+          footprint_clearing_enabled: true  # helps when robot is near the old marking
+
 
 
       inflation_layer:
@@ -227,6 +254,7 @@ map_saver:
     occupied_thresh_default: 0.65
     map_subscribe_transient_local: True
 
+# Based on navfn
 planner_server:
   ros__parameters:
     use_sim_time: True
