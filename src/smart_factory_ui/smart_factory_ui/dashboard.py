@@ -66,7 +66,7 @@ class Dashboard(QWidget):
         self.map_label.setText("Waiting for map...")
         right_panel.addWidget(self.map_label)
 
-        self.coord_label = QLabel("Map coordinates: hover not yet implemented")
+        self.coord_label = QLabel("Map of the Environment with robot positions and task locations will be displayed here.")
         self.coord_label.setAlignment(Qt.AlignCenter)
         right_panel.addWidget(self.coord_label)
 
