@@ -1,6 +1,6 @@
 import math
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import rclpy
 from rclpy.node import Node
@@ -20,7 +20,6 @@ def resolve_cell(
     unknown_value: int = -1,
     occupied_threshold: int = 50,
 ) -> int:
-
     if new_val == unknown_value:
         return old_val
 
@@ -36,36 +35,53 @@ def resolve_cell(
     return min(old_val, new_val)
 
 
+def transform_point(x: float, y: float, dx: float, dy: float, yaw: float) -> Tuple[float, float]:
+    cos_yaw = math.cos(yaw)
+    sin_yaw = math.sin(yaw)
+
+    tx = cos_yaw * x - sin_yaw * y + dx
+    ty = sin_yaw * x + cos_yaw * y + dy
+    return tx, ty
+
+
 def merge_all_maps(
-    maps: List[OccupancyGrid],
+    maps_with_offsets: List[Tuple[str, OccupancyGrid, Tuple[float, float, float]]],
     merged_frame_id: str = "merge_map",
     unknown_value: int = -1,
     occupied_threshold: int = 50,
     overwrite_known_cells: bool = False,
 ) -> Optional[OccupancyGrid]:
-    
-    if not maps:
+    if not maps_with_offsets:
         return None
 
-    min_x = min(m.info.origin.position.x for m in maps)
-    min_y = min(m.info.origin.position.y for m in maps)
+    resolution = min(m.info.resolution for _, m, _ in maps_with_offsets)
 
-    max_x = max(
-        m.info.origin.position.x + (m.info.width * m.info.resolution)
-        for m in maps
-    )
-    max_y = max(
-        m.info.origin.position.y + (m.info.height * m.info.resolution)
-        for m in maps
-    )
+    all_world_points = []
 
-    resolution = min(m.info.resolution for m in maps)
+    for _, m, (dx, dy, yaw) in maps_with_offsets:
+        corners = [
+            (0.0, 0.0),
+            (m.info.width * m.info.resolution, 0.0),
+            (0.0, m.info.height * m.info.resolution),
+            (m.info.width * m.info.resolution, m.info.height * m.info.resolution),
+        ]
 
-    width = int(math.ceil((max_x - min_x) / resolution))
-    height = int(math.ceil((max_y - min_y) / resolution))
+        for cx, cy in corners:
+            local_x = m.info.origin.position.x + cx
+            local_y = m.info.origin.position.y + cy
+            wx, wy = transform_point(local_x, local_y, dx, dy, yaw)
+            all_world_points.append((wx, wy))
+
+    min_x = min(p[0] for p in all_world_points)
+    min_y = min(p[1] for p in all_world_points)
+    max_x = max(p[0] for p in all_world_points)
+    max_y = max(p[1] for p in all_world_points)
+
+    width = int(math.ceil((max_x - min_x) / resolution)) + 1
+    height = int(math.ceil((max_y - min_y) / resolution)) + 1
 
     merged = OccupancyGrid()
-    merged.header = maps[0].header
+    merged.header = maps_with_offsets[0][1].header
     merged.header.frame_id = merged_frame_id
 
     merged.info.resolution = resolution
@@ -81,14 +97,16 @@ def merge_all_maps(
 
     merged.data = [unknown_value] * (width * height)
 
-    for m in maps:
+    for topic_name, m, (dx, dy, yaw) in maps_with_offsets:
         for y in range(m.info.height):
             for x in range(m.info.width):
                 src_i = x + y * m.info.width
                 val = m.data[src_i]
 
-                wx = m.info.origin.position.x + (x * m.info.resolution)
-                wy = m.info.origin.position.y + (y * m.info.resolution)
+                local_x = m.info.origin.position.x + (x * m.info.resolution)
+                local_y = m.info.origin.position.y + (y * m.info.resolution)
+
+                wx, wy = transform_point(local_x, local_y, dx, dy, yaw)
 
                 mx = int(math.floor((wx - min_x) / resolution))
                 my = int(math.floor((wy - min_y) / resolution))
@@ -124,6 +142,10 @@ class MergeMapNode(Node):
         self.declare_parameter("occupied_threshold", 50)
         self.declare_parameter("overwrite_known_cells", False)
 
+        # Per-topic manual offsets: [x, y, yaw]
+        self.declare_parameter("map_offsets./tb1/map", [0.0, 0.0, 0.0])
+        self.declare_parameter("map_offsets./tb2/map", [3.0, 0.0, 0.0])
+
         self.map_topic_regex = self.get_parameter("map_topic_regex").value
         self.publish_topic = self.get_parameter("publish_topic").value
         self.scan_period_sec = float(self.get_parameter("scan_period_sec").value)
@@ -152,6 +174,9 @@ class MergeMapNode(Node):
         self.subscriptions_by_topic: Dict[str, object] = {}
         self.latest_maps: Dict[str, OccupancyGrid] = {}
 
+        self.get_logger().info("Calling initial scan manually")
+        self.scan_for_map_topics()
+
         self.scan_timer = self.create_timer(
             self.scan_period_sec,
             self.scan_for_map_topics,
@@ -160,13 +185,22 @@ class MergeMapNode(Node):
         self.get_logger().info(
             f"merge_map started. Watching topics matching: {self.map_topic_regex}"
         )
-        self.get_logger().info(
-            f"Publishing merged map on: {self.publish_topic}"
+        self.get_logger().info(f"Publishing merged map on: {self.publish_topic}")
+
+    def get_topic_offset(self, topic_name: str) -> Tuple[float, float, float]:
+        param_name = f"map_offsets.{topic_name}"
+        if self.has_parameter(param_name):
+            vals = self.get_parameter(param_name).value
+            if isinstance(vals, (list, tuple)) and len(vals) == 3:
+                return float(vals[0]), float(vals[1]), float(vals[2])
+
+        self.get_logger().warn(
+            f"No offset configured for {topic_name}, using [0.0, 0.0, 0.0]"
         )
+        return 0.0, 0.0, 0.0
 
     def scan_for_map_topics(self) -> None:
         topics = self.get_topic_names_and_types()
-
         matching_topics = set()
 
         for topic_name, topic_types in topics:
@@ -189,13 +223,7 @@ class MergeMapNode(Node):
                 lambda msg, t=topic_name: self.map_callback(msg, t),
                 self.map_qos,
             )
-
             self.subscriptions_by_topic[topic_name] = subscription
-
-        vanished_topics = set(self.latest_maps.keys()) - matching_topics
-        for topic_name in vanished_topics:
-            self.get_logger().warn(f"Map topic no longer visible: {topic_name}")
-            self.latest_maps.pop(topic_name, None)
 
         self.publish_merged_map()
 
@@ -208,10 +236,14 @@ class MergeMapNode(Node):
             return
 
         ordered_topics = sorted(self.latest_maps.keys())
-        maps_to_merge = [self.latest_maps[t] for t in ordered_topics]
+        maps_with_offsets = []
+
+        for topic in ordered_topics:
+            offset = self.get_topic_offset(topic)
+            maps_with_offsets.append((topic, self.latest_maps[topic], offset))
 
         merged = merge_all_maps(
-            maps_to_merge,
+            maps_with_offsets,
             merged_frame_id=self.merged_frame_id,
             unknown_value=self.unknown_value,
             occupied_threshold=self.occupied_threshold,
