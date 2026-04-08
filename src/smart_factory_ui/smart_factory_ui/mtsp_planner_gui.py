@@ -397,6 +397,8 @@ class MainWindow(QMainWindow):
 
         splitter = QSplitter(Qt.Horizontal)
         root_layout.addWidget(splitter)
+        # Create map canvas first because left-side controls connect to it
+        self.map_canvas = MapCanvas(self.ros_node, self.log)
 
         # Left panel
         left = QWidget()
@@ -416,6 +418,11 @@ class MainWindow(QMainWindow):
         self.log_box.setReadOnly(True)
         self.log_box.setPlaceholderText("Logs / actions / run status...")
         left_layout.addWidget(self.log_box, stretch=1)
+
+        # Right panel
+        right = QWidget()
+        right_layout = QVBoxLayout(right)
+        right_layout.addWidget(self.map_canvas, stretch=1)
 
         # Right panel
         right = QWidget()
