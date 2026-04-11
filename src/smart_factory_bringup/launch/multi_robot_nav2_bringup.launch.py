@@ -8,9 +8,8 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
-from nav2_common.launch import ReplaceString, RewrittenYaml
+from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch.conditions import IfCondition, UnlessCondition
 
 def generate_launch_description():
     ld = LaunchDescription()
@@ -22,6 +21,7 @@ def generate_launch_description():
     rviz_config_file = LaunchConfiguration('rviz_config_file')
     params_file = LaunchConfiguration('nav_params_file')
     map_file = LaunchConfiguration('map')
+    use_slam = LaunchConfiguration('use_slam')
 
     ld.add_action(DeclareLaunchArgument(
         'use_sim_time',
@@ -33,6 +33,12 @@ def generate_launch_description():
         'enable_rviz',
         default_value='true',
         description='Enable rviz launch'
+    ))
+
+    ld.add_action(DeclareLaunchArgument(
+        'use_slam',
+        default_value='false',
+        description='If true, launch multi_robot_slam_toolbox.launch.py. If false, run Nav2 with AMCL.'
     ))
 
     ld.add_action(DeclareLaunchArgument(
@@ -51,13 +57,12 @@ def generate_launch_description():
         description='Full path to the ROS2 parameters file to use'
     ))
 
-    # Required by bringup_launch.py even in slam mode.
     ld.add_action(DeclareLaunchArgument(
         'map',
         default_value=os.path.join(
             package_dir, 'map', 'map.yaml'
         ),
-        description='Dummy map yaml path required by bringup_launch.py'
+        description='Map yaml path for localization mode; can be overridden at launch'
     ))
 
     setting_path = os.path.join(package_dir, 'params', 'general_settings.yaml')
@@ -67,6 +72,27 @@ def generate_launch_description():
     robots = settings["robots"]
     nav_launch_dir = os.path.join(package_dir, 'launch', 'nav2_bringup')
 
+    ld.add_action(IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(package_dir, 'launch', 'multi_robot_slam_toolbox.launch.py')
+        ),
+        launch_arguments={
+            'use_sim_time': use_sim_time,
+        }.items(),
+        condition=IfCondition(use_slam)
+    ))
+
+    ld.add_action(IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory('merge_map'),
+                'launch',
+                'merge_map_launch.py'
+            )
+        ),
+        condition=IfCondition(use_slam)
+    ))
+
     for robot in robots:
         namespace = robot['name']
 
@@ -75,16 +101,16 @@ def generate_launch_description():
                 os.path.join(nav_launch_dir, 'bringup_launch.py')
             ),
             launch_arguments={
-                'slam': 'False',
+                'use_slam': use_slam,
                 'namespace': namespace,
                 'use_namespace': 'True',
-                'map_server': 'False',
+                'map_server': 'True',
                 'map': map_file,
                 'params_file': params_file,
-                'autostart': 'true',
+                'autostart': 'True',
                 'use_sim_time': use_sim_time,
                 'log_level': 'warn',
-            }.items()
+            }.items(),
         ))
 
         ld.add_action(IncludeLaunchDescription(
@@ -100,7 +126,5 @@ def generate_launch_description():
             }.items(),
             condition=IfCondition(enable_rviz)
         ))
-
-        
 
     return ld

@@ -24,7 +24,7 @@ from launch_ros.actions import LoadComposableNodes
 from launch_ros.actions import Node
 from launch_ros.descriptions import ComposableNode
 from nav2_common.launch import RewrittenYaml
-
+from launch.substitutions import LaunchConfiguration, PythonExpression
 
 def generate_launch_description():
     # Get the launch directory
@@ -53,11 +53,18 @@ def generate_launch_description():
     remappings = [#('/tf', 'tf'),
                   #('/tf_static', 'tf_static'),
                   ('/scan', 'scan')]
+    
+
+    base_frame = PythonExpression(["'", namespace, "/base_footprint'"])
+    odom_frame = PythonExpression(["'", namespace, "/odom'"])
 
     # Create our own temporary YAML files that include substitutions
     param_substitutions = {
         'use_sim_time': use_sim_time,
-        'yaml_filename': map_yaml_file}
+        'yaml_filename': map_yaml_file,
+        '__BASE_FRAME__': base_frame,
+        '__ODOM_FRAME__': odom_frame,
+    }
     
     configured_params = RewrittenYaml(
         source_file=params_file,
