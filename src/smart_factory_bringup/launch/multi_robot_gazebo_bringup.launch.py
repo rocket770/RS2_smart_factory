@@ -153,7 +153,7 @@ def generate_launch_description():
                 '0', '0', '0',
                 '0', '0', '0',
                 'world',
-                f'{name}/map',
+                f'{name}/odom',
             ],
             output='screen',
         )

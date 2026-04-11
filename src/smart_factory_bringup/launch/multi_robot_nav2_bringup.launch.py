@@ -6,10 +6,11 @@ import yaml
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.conditions import IfCondition
-from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch.conditions import IfCondition, UnlessCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
+
 
 def generate_launch_description():
     ld = LaunchDescription()
@@ -93,6 +94,32 @@ def generate_launch_description():
         condition=IfCondition(use_slam)
     ))
 
+    ld.add_action(Node(
+        package='nav2_map_server',
+        executable='map_server',
+        name='map_server',
+        output='screen',
+        parameters=[{
+            'use_sim_time': use_sim_time,
+            'yaml_filename': map_file,
+            'frame_id': 'world',
+        }],
+        condition=UnlessCondition(use_slam)
+    ))
+
+    ld.add_action(Node(
+        package='nav2_lifecycle_manager',
+        executable='lifecycle_manager',
+        name='lifecycle_manager_map_server',
+        output='screen',
+        parameters=[{
+            'use_sim_time': use_sim_time,
+            'autostart': True,
+            'node_names': ['map_server'],
+        }],
+        condition=UnlessCondition(use_slam)
+    ))
+
     for robot in robots:
         namespace = robot['name']
 
@@ -104,7 +131,7 @@ def generate_launch_description():
                 'use_slam': use_slam,
                 'namespace': namespace,
                 'use_namespace': 'True',
-                'map_server': 'True',
+                'map_server': 'False',
                 'map': map_file,
                 'params_file': params_file,
                 'autostart': 'True',
