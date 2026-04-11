@@ -13,7 +13,8 @@ from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-
+from launch.substitutions import Command
+from launch_ros.parameter_descriptions import ParameterValue
 
 def generate_sdf_from_xacro(xacro_file: str, robot_ns: str, robot_name: str) -> str:
     tmp_dir = tempfile.gettempdir()
@@ -57,8 +58,8 @@ def generate_launch_description():
     pkg_multi = get_package_share_directory('smart_factory_bringup')
     pkg_gazebo_ros = get_package_share_directory('gazebo_ros')
 
-    urdf_file = os.path.join(
-        pkg_multi, 'urdf', f'turtlebot3_{turtlebot3_model}.urdf'
+    urdf_xacro = os.path.join(
+        pkg_multi, 'urdf', f'turtlebot3_{turtlebot3_model}.urdf.xacro'
     )
 
     model_xacro = os.path.join(
@@ -89,7 +90,7 @@ def generate_launch_description():
     ld.add_action(gzserver_cmd)
     ld.add_action(gzclient_cmd)
 
-    remappings = [('/tf', 'tf'), ('/tf_static', 'tf_static')]
+    remappings = []#[('/tf', 'tf'), ('/tf_static', 'tf_static')]
 
     last_action = None
 
@@ -105,6 +106,15 @@ def generate_launch_description():
             robot_name=name,
         )
 
+        robot_description = ParameterValue(
+            Command([
+                'xacro ',
+                urdf_xacro,
+                ' robot_ns:=', name,
+            ]),
+            value_type=str
+        )
+
         robot_state_publisher = Node(
             package='robot_state_publisher',
             executable='robot_state_publisher',
@@ -114,10 +124,9 @@ def generate_launch_description():
                 {
                     'use_sim_time': use_sim_time,
                     'publish_frequency': 10.0,
+                    'robot_description': robot_description,
                 }
             ],
-            remappings=remappings,
-            arguments=[urdf_file],
         )
 
         spawn_robot = Node(
@@ -136,9 +145,23 @@ def generate_launch_description():
             output='screen',
         )
 
+        world_to_map = Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name=f'{name}_world_to_map',
+            arguments=[
+                '0', '0', '0',
+                '0', '0', '0',
+                'world',
+                f'{name}/map',
+            ],
+            output='screen',
+        )
+
         if last_action is None:
             ld.add_action(robot_state_publisher)
             ld.add_action(spawn_robot)
+            ld.add_action(world_to_map)
         else:
             ld.add_action(RegisterEventHandler(
                 OnProcessExit(
@@ -146,6 +169,7 @@ def generate_launch_description():
                     on_exit=[
                         robot_state_publisher,
                         spawn_robot,
+                        world_to_map,
                     ],
                 )
             ))

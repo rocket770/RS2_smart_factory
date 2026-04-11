@@ -38,6 +38,10 @@ def generate_launch_description():
     for robot in robots:
         namespace = robot['name']
 
+        map_frame = f'{namespace}/map'
+        odom_frame = f'{namespace}/odom'
+        base_frame = f'{namespace}/base_footprint'
+
         ld.add_action(Node(
             package='slam_toolbox',
             executable='async_slam_toolbox_node',
@@ -48,19 +52,19 @@ def generate_launch_description():
                 slam_params_file,
                 {
                     'use_sim_time': use_sim_time,
-                    'odom_frame': 'odom',
-                    'base_frame': 'base_footprint',
-                    'map_frame': 'map',
+                    'odom_frame': odom_frame,
+                    'base_frame': base_frame,
+                    'map_frame': map_frame,
                     'scan_topic': 'scan',
+                    'transform_timeout': 0.5,
+                    'tf_buffer_duration': 30.0,
                 }
             ],
             remappings=[
-                ('/scan', 'scan'),
-                ('/map', 'map'),
-                ('/map_metadata', 'map_metadata'),
-                ('/tf', 'tf'),
-                ('/tf_static', 'tf_static'),
+                ('/scan', f'/{namespace}/scan'),
+                ('/map', f'/{namespace}/map'),
+                ('/map_metadata', f'/{namespace}/map_metadata'),
+                ('/map_updates', f'/{namespace}/map_updates'),
             ]
         ))
-
     return ld

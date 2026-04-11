@@ -144,7 +144,7 @@ class MergeMapNode(Node):
 
         # Per-topic manual offsets: [x, y, yaw]
         self.declare_parameter("map_offsets./tb1/map", [0.0, 0.0, 0.0])
-        self.declare_parameter("map_offsets./tb2/map", [3.0, 0.0, 0.0])
+        self.declare_parameter("map_offsets./tb2/map", [0.0, 0.0, 0.0])
 
         self.map_topic_regex = self.get_parameter("map_topic_regex").value
         self.publish_topic = self.get_parameter("publish_topic").value
