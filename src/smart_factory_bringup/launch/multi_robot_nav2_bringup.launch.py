@@ -53,7 +53,7 @@ def generate_launch_description():
     ld.add_action(DeclareLaunchArgument(
         'nav_params_file',
         default_value=os.path.join(
-            package_dir, 'params', 'nav2_slam_params.yaml'
+            package_dir, 'params', 'nav2_slam_params.yaml' 
         ),
         description='Full path to the ROS2 parameters file to use'
     ))
@@ -61,7 +61,7 @@ def generate_launch_description():
     ld.add_action(DeclareLaunchArgument(
         'map',
         default_value=os.path.join(
-            package_dir, 'map', 'map.yaml'
+            package_dir, 'map', 'factory_merged.yaml'
         ),
         description='Map yaml path for localization mode; can be overridden at launch'
     ))
