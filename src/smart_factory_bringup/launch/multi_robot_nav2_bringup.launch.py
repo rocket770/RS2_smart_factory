@@ -102,7 +102,7 @@ def generate_launch_description():
         parameters=[{
             'use_sim_time': use_sim_time,
             'yaml_filename': map_file,
-            'frame_id': 'world',
+            'frame_id': 'map',
         }],
         condition=UnlessCondition(use_slam)
     ))
@@ -122,6 +122,9 @@ def generate_launch_description():
 
     for robot in robots:
         namespace = robot['name']
+        initial_pose_x = str(robot.get('initial_pose_x', robot['x_pose']))
+        initial_pose_y = str(robot.get('initial_pose_y', robot['y_pose']))
+        initial_pose_yaw = str(robot.get('initial_pose_yaw', robot.get('yaw', 0.0)))
 
         ld.add_action(IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -137,7 +140,24 @@ def generate_launch_description():
                 'autostart': 'True',
                 'use_sim_time': use_sim_time,
                 'log_level': 'warn',
+                'initial_pose_x': initial_pose_x,
+                'initial_pose_y': initial_pose_y,
+                'initial_pose_yaw': initial_pose_yaw,
             }.items(),
+        ))
+
+        ld.add_action(Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name=f'{namespace}_map_to_local_map',
+            arguments=[
+                '0', '0', '0',
+                '0', '0', '0',
+                'map',
+                f'{namespace}/map',
+            ],
+            output='screen',
+            condition=IfCondition(use_slam)
         ))
 
         ld.add_action(IncludeLaunchDescription(

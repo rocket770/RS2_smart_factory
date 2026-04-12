@@ -99,6 +99,7 @@ def generate_launch_description():
         x_pose = str(robot['x_pose'])
         y_pose = str(robot['y_pose'])
         z_pose = str(robot.get('z_pose', 0.01))
+        yaw = str(robot.get('yaw', 0.0))
 
         sdf_file = generate_sdf_from_xacro(
             xacro_file=model_xacro,
@@ -139,37 +140,23 @@ def generate_launch_description():
                 '-x', x_pose,
                 '-y', y_pose,
                 '-z', z_pose,
-                '-Y', '0.0',
+                '-Y', yaw,
                 '-unpause',
             ],
             output='screen',
         )
 
-        world_to_map = Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            name=f'{name}_world_to_map',
-            arguments=[
-                '0', '0', '0',
-                '0', '0', '0',
-                'world',
-                f'{name}/odom',
-            ],
-            output='screen',
-        )
 
         if last_action is None:
             ld.add_action(robot_state_publisher)
             ld.add_action(spawn_robot)
-            ld.add_action(world_to_map)
         else:
             ld.add_action(RegisterEventHandler(
                 OnProcessExit(
                     target_action=last_action,
                     on_exit=[
                         robot_state_publisher,
-                        spawn_robot,
-                        world_to_map,
+                        spawn_robot
                     ],
                 )
             ))

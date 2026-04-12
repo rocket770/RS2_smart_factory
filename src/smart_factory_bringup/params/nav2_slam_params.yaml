@@ -11,7 +11,7 @@ amcl:
     beam_skip_error_threshold: 0.9
     beam_skip_threshold: 0.3
     do_beamskip: false
-    global_frame_id: "world"
+    global_frame_id: "map"
     lambda_short: 0.1
     laser_likelihood_max_dist: 2.0
     laser_max_range: 100.0
@@ -29,6 +29,11 @@ amcl:
     robot_model_type: "nav2_amcl::DifferentialMotionModel"
     save_pose_rate: 0.5
     sigma_hit: 0.2
+    set_initial_pose: true
+    initial_pose.x: __INITIAL_POSE_X__
+    initial_pose.y: __INITIAL_POSE_Y__
+    initial_pose.z: 0.0
+    initial_pose.yaw: __INITIAL_POSE_YAW__
     tf_broadcast: true
     transform_tolerance: 1.0
     update_min_a: 0.2
@@ -51,7 +56,7 @@ amcl_rclcpp_node:
 bt_navigator:
   ros__parameters:
     use_sim_time: True
-    global_frame: world
+    global_frame: map
     robot_base_frame: __BASE_FRAME__
     odom_topic: odom
     enable_groot_monitoring: False
@@ -231,7 +236,7 @@ global_costmap:
       use_sim_time: True
       update_frequency: 2.0
       publish_frequency: 2.0
-      global_frame: world
+      global_frame: map
       robot_base_frame: __BASE_FRAME__
       footprint: "[[0.15, 0.16], [0.15, -0.16], [-0.15, -0.16], [-0.15, 0.16]]"
       resolution: 0.05

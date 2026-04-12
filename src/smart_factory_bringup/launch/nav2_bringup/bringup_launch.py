@@ -44,6 +44,9 @@ def generate_launch_description():
     log_level = LaunchConfiguration('log_level')
     use_slam = LaunchConfiguration('use_slam')
     map_server = LaunchConfiguration('map_server')
+    initial_pose_x = LaunchConfiguration('initial_pose_x')
+    initial_pose_y = LaunchConfiguration('initial_pose_y')
+    initial_pose_yaw = LaunchConfiguration('initial_pose_yaw')
 
     # Map fully qualified names to relative ones so the node's namespace can be prepended.
     # In case of the transforms (tf), currently, there doesn't seem to be a better alternative
@@ -117,6 +120,21 @@ def generate_launch_description():
     declare_log_level_cmd = DeclareLaunchArgument(
         'log_level', default_value='info',
         description='log level')
+
+    declare_initial_pose_x_cmd = DeclareLaunchArgument(
+        'initial_pose_x',
+        default_value='0.0',
+        description='Initial AMCL x pose in the shared map frame')
+
+    declare_initial_pose_y_cmd = DeclareLaunchArgument(
+        'initial_pose_y',
+        default_value='0.0',
+        description='Initial AMCL y pose in the shared map frame')
+
+    declare_initial_pose_yaw_cmd = DeclareLaunchArgument(
+        'initial_pose_yaw',
+        default_value='0.0',
+        description='Initial AMCL yaw pose in the shared map frame')
     
    
     # Specify the actions
@@ -151,6 +169,9 @@ def generate_launch_description():
                 'use_respawn': use_respawn,
                 'container_name': 'nav2_container',
                 'log_level': log_level,
+                'initial_pose_x': initial_pose_x,
+                'initial_pose_y': initial_pose_y,
+                'initial_pose_yaw': initial_pose_yaw,
             }.items()
         ),
 
@@ -183,6 +204,9 @@ def generate_launch_description():
     ld.add_action(declare_use_composition_cmd)
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_log_level_cmd)
+    ld.add_action(declare_initial_pose_x_cmd)
+    ld.add_action(declare_initial_pose_y_cmd)
+    ld.add_action(declare_initial_pose_yaw_cmd)
     ld.add_action(declare_use_slam_cmd)
     ld.add_action(declare_map_server_cmd)
     # Add the actions to launch all of the navigation nodes
