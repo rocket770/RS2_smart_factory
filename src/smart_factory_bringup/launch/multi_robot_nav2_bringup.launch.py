@@ -94,6 +94,20 @@ def generate_launch_description():
         condition=IfCondition(use_slam)
     ))
 
+    ld.add_action(IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory('smart_factory_navigation'),
+                'launch',
+                'multi_robot_explorer.launch.py'
+            )
+        ),
+        launch_arguments={
+            'map_topic': '/map',
+        }.items(),
+        condition=IfCondition(use_slam)
+    ))
+
     ld.add_action(Node(
         package='nav2_map_server',
         executable='map_server',

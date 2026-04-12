@@ -78,7 +78,7 @@ class RobotHandle:
 
 
 class RobotTfStore:
-    """Stores namespaced TF messages and computes 2D pose map->base_link/base_footprint."""
+    """Stores TF messages and computes 2D robot pose across shared or namespaced TF trees."""
 
     def __init__(self, node: Node, namespace: str, preferred_base_frame: str, fallback_base_frame: str):
         self._node = node
@@ -87,8 +87,10 @@ class RobotTfStore:
         self.fallback_base_frame = fallback_base_frame
         self.transforms: Dict[Tuple[str, str], TransformStamped] = {}
         self.last_update_time: Optional[Time] = None
-        self.tf_sub = node.create_subscription(TFMessage, f'/{namespace}/tf', self._tf_callback, 50)
-        self.tf_static_sub = node.create_subscription(TFMessage, f'/{namespace}/tf_static', self._tf_callback, 50)
+        self.tf_sub = node.create_subscription(TFMessage, '/tf', self._tf_callback, 100)
+        self.tf_static_sub = node.create_subscription(TFMessage, '/tf_static', self._tf_callback, 100)
+        self.namespaced_tf_sub = node.create_subscription(TFMessage, f'/{namespace}/tf', self._tf_callback, 50)
+        self.namespaced_tf_static_sub = node.create_subscription(TFMessage, f'/{namespace}/tf_static', self._tf_callback, 50)
 
     def _tf_callback(self, msg: TFMessage) -> None:
         now = self._node.get_clock().now()
@@ -135,11 +137,32 @@ class RobotTfStore:
         return tr.x, tr.y, self._yaw_from_quaternion(rot)
 
     def lookup_pose_xy(self) -> Optional[Tuple[float, float]]:
-        for base in [self.preferred_base_frame, self.fallback_base_frame]:
-            pose = self._resolve_2d('map', base)
+        for source_frame, target_frame in self._pose_lookup_pairs():
+            pose = self._resolve_2d(source_frame, target_frame)
             if pose is not None:
                 return pose[0], pose[1]
         return None
+
+    def _pose_lookup_pairs(self) -> List[Tuple[str, str]]:
+        shared_map_frame = 'map'
+        local_map_frame = f'{self.namespace}/map'
+        target_frames = self._candidate_target_frames()
+
+        pairs: List[Tuple[str, str]] = []
+        for source_frame in [shared_map_frame, local_map_frame]:
+            for target_frame in target_frames:
+                pair = (source_frame, target_frame)
+                if pair not in pairs:
+                    pairs.append(pair)
+        return pairs
+
+    def _candidate_target_frames(self) -> List[str]:
+        candidates: List[str] = []
+        for frame in [self.preferred_base_frame, self.fallback_base_frame]:
+            for candidate in [f'{self.namespace}/{frame}', frame]:
+                if candidate not in candidates:
+                    candidates.append(candidate)
+        return candidates
 
     def _resolve_2d(self, source: str, target: str) -> Optional[Tuple[float, float, float]]:
         if source == target:

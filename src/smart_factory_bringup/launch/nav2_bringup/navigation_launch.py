@@ -42,6 +42,7 @@ def generate_params(context, *args, **kwargs):
     data = data.replace('__MAP_FRAME__', f'{namespace}/map')
     data = data.replace('__ODOM_FRAME__', f'{namespace}/odom')
     data = data.replace('__BASE_FRAME__', f'{namespace}/base_footprint')
+    data = data.replace('__SCAN_TOPIC__', f'/{namespace}/scan')
 
     tmp = tempfile.NamedTemporaryFile(mode='w', delete=False)
     tmp.write(data)
@@ -74,7 +75,8 @@ def launch_setup(context, *args, **kwargs):
     remappings = [
         #('/tf', 'tf'),
         #('/tf_static', 'tf_static'),
-        ('/scan', [namespace, '/scan'])
+        ('scan', ['/', namespace, '/scan']),
+        ('/scan', ['/', namespace, '/scan'])
     ]
 
     namespaced_params = generate_params(context)

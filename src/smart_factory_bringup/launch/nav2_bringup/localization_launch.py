@@ -56,17 +56,20 @@ def generate_launch_description():
     #              https://github.com/ros2/launch_ros/issues/56
     remappings = [#('/tf', 'tf'),
                   #('/tf_static', 'tf_static'),
-                  ('/scan', 'scan')]
+                  ('scan', ['/', namespace, '/scan']),
+                  ('/scan', ['/', namespace, '/scan'])]
     
 
     base_frame = PythonExpression(["'", namespace, "/base_footprint'"])
     odom_frame = PythonExpression(["'", namespace, "/odom'"])
+    scan_topic = PythonExpression(["'/", namespace, "/scan'"])
 
     namespaced_params = ReplaceString(
         source_file=params_file,
         replacements={
             '__BASE_FRAME__': base_frame,
             '__ODOM_FRAME__': odom_frame,
+            '__SCAN_TOPIC__': scan_topic,
             '__INITIAL_POSE_X__': initial_pose_x,
             '__INITIAL_POSE_Y__': initial_pose_y,
             '__INITIAL_POSE_YAW__': initial_pose_yaw,

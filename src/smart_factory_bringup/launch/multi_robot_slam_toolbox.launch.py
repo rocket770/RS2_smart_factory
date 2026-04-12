@@ -55,17 +55,13 @@ def generate_launch_description():
                     'odom_frame': odom_frame,
                     'base_frame': base_frame,
                     'map_frame': map_frame,
-                    'scan_topic': 'scan',
+                    'scan_topic': f'/{namespace}/scan',
                     'transform_timeout': 0.5,
                     'tf_buffer_duration': 30.0,
-                    
-                    
                     'map_update_interval': 1.0,
-
                     'throttle_scans': 1,
-
-                    'minimum_travel_distance': 0.0,
-                    'minimum_travel_heading': 0.0
+                    'minimum_travel_distance': 0.05,
+                    'minimum_travel_heading': 0.05
                 }
             ],
             remappings=[

@@ -13,14 +13,6 @@ def generate_launch_description():
 
     return LaunchDescription([
         Node(
-            package='rviz2',
-            executable='rviz2',
-            name='rviz2',
-            output='screen',
-            arguments=['-d', rviz_file],
-            parameters=[{'use_sim_time': True}],
-        ),
-        Node(
             package='merge_map',
             executable='merge_map',
             name='merge_map',
