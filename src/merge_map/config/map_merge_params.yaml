@@ -9,4 +9,4 @@ merge_map:
     occupied_threshold: 50
     overwrite_known_cells: false
     conflict_policy: "prefer_free"
-    free_space_clear_radius_cells: 1
+    free_space_clear_radius_cells: 0
