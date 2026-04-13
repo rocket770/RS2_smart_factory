@@ -14,11 +14,16 @@ from rclpy.qos import (
 from nav_msgs.msg import OccupancyGrid
 
 
+def world_to_grid_index(world_coord: float, origin_coord: float, resolution: float) -> int:
+    return int(round(((world_coord - origin_coord) / resolution) - 0.5))
+
+
 def resolve_cell(
     old_val: int,
     new_val: int,
     unknown_value: int = -1,
     occupied_threshold: int = 50,
+    conflict_policy: str = "prefer_occupied",
 ) -> int:
     if new_val == unknown_value:
         return old_val
@@ -29,7 +34,18 @@ def resolve_cell(
     old_occ = old_val >= occupied_threshold
     new_occ = new_val >= occupied_threshold
 
-    if old_occ or new_occ:
+    if old_occ == new_occ:
+        if old_occ:
+            return max(old_val, new_val)
+        return min(old_val, new_val)
+
+    if conflict_policy == "latest":
+        return new_val
+
+    if conflict_policy == "prefer_free":
+        return min(old_val, new_val)
+
+    if conflict_policy == "prefer_occupied":
         return max(old_val, new_val)
 
     return min(old_val, new_val)
@@ -50,6 +66,8 @@ def merge_all_maps(
     unknown_value: int = -1,
     occupied_threshold: int = 50,
     overwrite_known_cells: bool = False,
+    conflict_policy: str = "prefer_occupied",
+    free_space_clear_radius_cells: int = 0,
 ) -> Optional[OccupancyGrid]:
     if not maps_with_offsets:
         return None
@@ -103,13 +121,15 @@ def merge_all_maps(
                 src_i = x + y * m.info.width
                 val = m.data[src_i]
 
-                local_x = m.info.origin.position.x + (x * m.info.resolution)
-                local_y = m.info.origin.position.y + (y * m.info.resolution)
+                # Merge using cell centers so maps with slightly different origins
+                # align better and a newly-free cell can clear a stale obstacle.
+                local_x = m.info.origin.position.x + ((x + 0.5) * m.info.resolution)
+                local_y = m.info.origin.position.y + ((y + 0.5) * m.info.resolution)
 
                 wx, wy = transform_point(local_x, local_y, dx, dy, yaw)
 
-                mx = int(math.floor((wx - min_x) / resolution))
-                my = int(math.floor((wy - min_y) / resolution))
+                mx = world_to_grid_index(wx, min_x, resolution)
+                my = world_to_grid_index(wy, min_y, resolution)
 
                 if not (0 <= mx < width and 0 <= my < height):
                     continue
@@ -125,7 +145,32 @@ def merge_all_maps(
                         val,
                         unknown_value=unknown_value,
                         occupied_threshold=occupied_threshold,
+                        conflict_policy=conflict_policy,
                     )
+
+                    if (
+                        free_space_clear_radius_cells > 0
+                        and val != unknown_value
+                        and val < occupied_threshold
+                    ):
+                        for ny in range(
+                            max(0, my - free_space_clear_radius_cells),
+                            min(height, my + free_space_clear_radius_cells + 1),
+                        ):
+                            for nx in range(
+                                max(0, mx - free_space_clear_radius_cells),
+                                min(width, mx + free_space_clear_radius_cells + 1),
+                            ):
+                                if (nx - mx) ** 2 + (ny - my) ** 2 > free_space_clear_radius_cells ** 2:
+                                    continue
+                                neighbor_i = nx + ny * width
+                                merged.data[neighbor_i] = resolve_cell(
+                                    merged.data[neighbor_i],
+                                    val,
+                                    unknown_value=unknown_value,
+                                    occupied_threshold=occupied_threshold,
+                                    conflict_policy=conflict_policy,
+                                )
 
     return merged
 
@@ -141,6 +186,8 @@ class MergeMapNode(Node):
         self.declare_parameter("unknown_value", -1)
         self.declare_parameter("occupied_threshold", 50)
         self.declare_parameter("overwrite_known_cells", False)
+        self.declare_parameter("conflict_policy", "prefer_occupied")
+        self.declare_parameter("free_space_clear_radius_cells", 0)
 
         # Per-topic manual offsets: [x, y, yaw]
         self.declare_parameter("map_offsets./tb1/map", [0.0, 0.0, 0.0])
@@ -154,6 +201,10 @@ class MergeMapNode(Node):
         self.occupied_threshold = int(self.get_parameter("occupied_threshold").value)
         self.overwrite_known_cells = bool(
             self.get_parameter("overwrite_known_cells").value
+        )
+        self.conflict_policy = str(self.get_parameter("conflict_policy").value)
+        self.free_space_clear_radius_cells = int(
+            self.get_parameter("free_space_clear_radius_cells").value
         )
 
         self.topic_pattern = re.compile(self.map_topic_regex)
@@ -248,6 +299,8 @@ class MergeMapNode(Node):
             unknown_value=self.unknown_value,
             occupied_threshold=self.occupied_threshold,
             overwrite_known_cells=self.overwrite_known_cells,
+            conflict_policy=self.conflict_policy,
+            free_space_clear_radius_cells=self.free_space_clear_radius_cells,
         )
 
         if merged is None:

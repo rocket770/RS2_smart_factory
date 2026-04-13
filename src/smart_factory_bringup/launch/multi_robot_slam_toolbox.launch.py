@@ -28,11 +28,15 @@ def generate_launch_description():
 
     robots = settings['robots']
 
-    # You can also use your own slam toolbox yaml here if you have one.
-    slam_params_file = os.path.join(
+    default_slam_params_file = os.path.join(
         get_package_share_directory('slam_toolbox'),
         'config',
         'mapper_params_online_async.yaml'
+    )
+    slam_overlay_params_file = os.path.join(
+        package_dir,
+        'params',
+        'slam_toolbox_dynamic_overlay.yaml'
     )
 
     for robot in robots:
@@ -49,7 +53,8 @@ def generate_launch_description():
             namespace=namespace,
             output='screen',
             parameters=[
-                slam_params_file,
+                default_slam_params_file,
+                slam_overlay_params_file,
                 {
                     'use_sim_time': use_sim_time,
                     'odom_frame': odom_frame,
@@ -58,10 +63,10 @@ def generate_launch_description():
                     'scan_topic': f'/{namespace}/scan',
                     'transform_timeout': 0.5,
                     'tf_buffer_duration': 30.0,
-                    'map_update_interval': 1.0,
+                    'map_update_interval': 0.2,
                     'throttle_scans': 1,
-                    'minimum_travel_distance': 0.05,
-                    'minimum_travel_heading': 0.05
+                    'minimum_travel_distance': 0.0,
+                    'minimum_travel_heading': 0.0
                 }
             ],
             remappings=[

@@ -234,8 +234,8 @@ global_costmap:
   global_costmap:
     ros__parameters:
       use_sim_time: True
-      update_frequency: 2.0
-      publish_frequency: 2.0
+      update_frequency: 5.0
+      publish_frequency: 5.0
       global_frame: map
       robot_base_frame: __BASE_FRAME__
       footprint: "[[0.15, 0.16], [0.15, -0.16], [-0.15, -0.16], [-0.15, 0.16]]"
@@ -257,6 +257,7 @@ global_costmap:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
         footprint_clearing_enabled: True
+        combination_method: 0
         observation_sources: scan
         scan:
           topic: __SCAN_TOPIC__
