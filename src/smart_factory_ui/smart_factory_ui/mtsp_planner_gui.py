@@ -422,11 +422,6 @@ class MainWindow(QMainWindow):
         # Right panel
         right = QWidget()
         right_layout = QVBoxLayout(right)
-        right_layout.addWidget(self.map_canvas, stretch=1)
-
-        # Right panel
-        right = QWidget()
-        right_layout = QVBoxLayout(right)
         self.map_canvas = MapCanvas(self.ros_node, self.log)
         right_layout.addWidget(self.map_canvas, stretch=1)
 

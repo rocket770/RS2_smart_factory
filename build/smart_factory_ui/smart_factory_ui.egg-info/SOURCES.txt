@@ -11,6 +11,11 @@ setup.py
 resource/smart_factory_ui
 smart_factory_ui/__init__.py
 smart_factory_ui/add_task_cli.py
+smart_factory_ui/dashboard.py
+smart_factory_ui/gui_node.py
+smart_factory_ui/main.py
+smart_factory_ui/mtsp_planner_gui.py
+smart_factory_ui/ros_interface.py
 test/test_copyright.py
 test/test_flake8.py
 test/test_pep257.py
