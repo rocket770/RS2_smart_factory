@@ -9,6 +9,8 @@
 #include <thread>
 #include <vector>
 
+#include "../include/smart_factory_mtsp_solver/nav2_path_cost_provider.hpp"
+
 namespace smart_factory_mtsp_solver
 {
 
@@ -26,12 +28,39 @@ namespace smart_factory_mtsp_solver
     this->declare_parameter<double>("unused_robot_penalty", 0.0);
     this->declare_parameter<double>("route_count_balance_penalty", 0.0);
     this->declare_parameter<double>("publish_generation_delay", 25);
+    this->declare_parameter<std::string>("distance_backend", "euclidean");
+
+    this->declare_parameter<std::string>("planner_action_name", "/tb2/compute_path_to_pose");
+    this->declare_parameter<std::string>("global_frame", "map");
+    this->declare_parameter<std::string>("planner_id", "");
+    this->declare_parameter<int>("planner_server_timeout_ms", 5000);
+    this->declare_parameter<int>("planner_result_timeout_ms", 10000);
 
     progress_publisher_ = this->create_publisher<std_msgs::msg::String>("mtsp_best_solution", 10);
 
     startup_timer_ = this->create_wall_timer(
       std::chrono::milliseconds(500),
-      std::bind(&MtspSolverNode::start_solver, this));
+      [this]() {
+        startup_timer_->cancel();
+        solver_thread_ = std::thread([this]() {
+          this->start_solver();
+        });
+      });
+  }
+
+  MtspSolverNode::~MtspSolverNode()
+  {
+    if (startup_timer_) {
+      startup_timer_->cancel();
+    }
+  
+    if (solver_thread_.joinable()) {
+      if (solver_thread_.get_id() == std::this_thread::get_id()) {
+        solver_thread_.detach();
+      } else {
+        solver_thread_.join();
+      }
+    }
   }
 
   void MtspSolverNode::start_solver()
@@ -71,6 +100,17 @@ namespace smart_factory_mtsp_solver
     const bool publish_progress = this->get_parameter("publish_progress").as_bool();
     const int generation_delay_ms = this->get_parameter("generation_delay_ms").as_int();
 
+    const std::string distance_backend_str = this->get_parameter("distance_backend").as_string();
+
+    if (distance_backend_str == "euclidean") {
+      params.distance_backend = DistanceBackend::EUCLIDEAN;
+    } else if (distance_backend_str == "nav2") {
+      params.distance_backend = DistanceBackend::NAV2;
+    } else {
+      throw std::runtime_error(
+              "Invalid distance_backend parameter. Expected 'euclidean' or 'nav2'");
+    }
+
     GeneticAlgorithm ga;
 
     ProgressCallback callback;
@@ -87,7 +127,25 @@ namespace smart_factory_mtsp_solver
       };
     }
 
-    const Solution solution = ga.solve(problem, params, callback);
+    std::unique_ptr<PathCostProvider> path_cost_provider;
+
+    if (params.distance_backend == DistanceBackend::NAV2) {
+      auto nav2_provider = std::make_unique<Nav2PathCostProvider>(
+        this->shared_from_this(),
+        "/tb2/compute_path_to_pose",
+        "map",
+        "",
+        std::chrono::milliseconds(5000),
+        std::chrono::milliseconds(10000));
+
+      if (!nav2_provider->wait_until_ready()) {
+        throw std::runtime_error("Nav2 planner action server is not ready");
+      }
+
+      path_cost_provider = std::move(nav2_provider);
+    }
+
+    const Solution solution = ga.solve(problem, params, callback, path_cost_provider.get());
 
     log_solution(solution, problem);
 

@@ -4,6 +4,10 @@ robots:
     y_pose: -1.7
     z_pose: 0.01
   - name: tb2
-    x_pose: 1.12
-    y_pose: 0.6
+    x_pose: 1.7
+    y_pose: 0.0
     z_pose: 0.01
+  # - name: tb3
+  #   x_pose: 1.7
+  #   y_pose: 0.0
+  #   z_pose: 0.01

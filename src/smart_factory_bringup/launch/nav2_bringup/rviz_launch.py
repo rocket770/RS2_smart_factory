@@ -71,8 +71,8 @@ def generate_launch_description():
         namespace=namespace,
         arguments=['-d', namespaced_rviz_config_file],
         output='screen',
-        remappings=[('/tf', 'tf'),
-                    ('/tf_static', 'tf_static'),
+        remappings=[#('/tf', 'tf'),
+                    #('/tf_static', 'tf_static'),
                     ('/goal_pose', 'goal_pose'),
                     ('/clicked_point', 'clicked_point'),
                     ('/initialpose', 'initialpose')])

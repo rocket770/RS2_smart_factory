@@ -24,7 +24,8 @@ from launch_ros.actions import LoadComposableNodes
 from launch_ros.actions import Node
 from launch_ros.descriptions import ComposableNode
 from nav2_common.launch import RewrittenYaml
-
+from launch.substitutions import LaunchConfiguration, PythonExpression
+from nav2_common.launch import RewrittenYaml, ReplaceString
 
 def generate_launch_description():
     # Get the launch directory
@@ -41,6 +42,9 @@ def generate_launch_description():
     container_name_full = (namespace, '/', container_name)
     use_respawn = LaunchConfiguration('use_respawn')
     log_level = LaunchConfiguration('log_level')
+    initial_pose_x = LaunchConfiguration('initial_pose_x')
+    initial_pose_y = LaunchConfiguration('initial_pose_y')
+    initial_pose_yaw = LaunchConfiguration('initial_pose_yaw')
 
     lifecycle_nodes = ['amcl']
 
@@ -50,20 +54,39 @@ def generate_launch_description():
     # https://github.com/ros/robot_state_publisher/pull/30
     # TODO(orduno) Substitute with `PushNodeRemapping`
     #              https://github.com/ros2/launch_ros/issues/56
-    remappings = [('/tf', 'tf'),
-                  ('/tf_static', 'tf_static'),
-                  ('/scan', 'scan')]
+    remappings = [#('/tf', 'tf'),
+                  #('/tf_static', 'tf_static'),
+                  ('scan', ['/', namespace, '/scan']),
+                  ('/scan', ['/', namespace, '/scan'])]
+    
 
-    # Create our own temporary YAML files that include substitutions
+    base_frame = PythonExpression(["'", namespace, "/base_footprint'"])
+    odom_frame = PythonExpression(["'", namespace, "/odom'"])
+    scan_topic = PythonExpression(["'/", namespace, "/scan'"])
+
+    namespaced_params = ReplaceString(
+        source_file=params_file,
+        replacements={
+            '__BASE_FRAME__': base_frame,
+            '__ODOM_FRAME__': odom_frame,
+            '__SCAN_TOPIC__': scan_topic,
+            '__INITIAL_POSE_X__': initial_pose_x,
+            '__INITIAL_POSE_Y__': initial_pose_y,
+            '__INITIAL_POSE_YAW__': initial_pose_yaw,
+        }
+    )
+
     param_substitutions = {
         'use_sim_time': use_sim_time,
-        'yaml_filename': map_yaml_file}
-    
+        'yaml_filename': map_yaml_file,
+    }
+
     configured_params = RewrittenYaml(
-        source_file=params_file,
+        source_file=namespaced_params,
         root_key=namespace,
         param_rewrites=param_substitutions,
-        convert_types=True)
+        convert_types=True
+)
 
     stdout_linebuf_envvar = SetEnvironmentVariable(
         'RCUTILS_LOGGING_BUFFERED_STREAM', '1')
@@ -111,6 +134,21 @@ def generate_launch_description():
     declare_log_level_cmd = DeclareLaunchArgument(
         'log_level', default_value='info',
         description='log level')
+
+    declare_initial_pose_x_cmd = DeclareLaunchArgument(
+        'initial_pose_x',
+        default_value='0.0',
+        description='Initial AMCL x pose in the shared map frame')
+
+    declare_initial_pose_y_cmd = DeclareLaunchArgument(
+        'initial_pose_y',
+        default_value='0.0',
+        description='Initial AMCL y pose in the shared map frame')
+
+    declare_initial_pose_yaw_cmd = DeclareLaunchArgument(
+        'initial_pose_yaw',
+        default_value='0.0',
+        description='Initial AMCL yaw pose in the shared map frame')
 
     load_nodes = GroupAction(
         condition=IfCondition(PythonExpression(['not ', use_composition])),
@@ -203,6 +241,9 @@ def generate_launch_description():
     ld.add_action(declare_container_name_cmd)
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_log_level_cmd)
+    ld.add_action(declare_initial_pose_x_cmd)
+    ld.add_action(declare_initial_pose_y_cmd)
+    ld.add_action(declare_initial_pose_yaw_cmd)
 
     # Add the actions to launch all of the localiztion nodes
     ld.add_action(load_nodes)

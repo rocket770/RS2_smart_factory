@@ -1,3 +1,0 @@
-[console_scripts]
-task_server = smart_factory_task_server.task_server:main
-

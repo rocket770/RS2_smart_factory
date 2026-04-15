@@ -28,15 +28,23 @@ def generate_launch_description():
 
     robots = settings['robots']
 
-    # You can also use your own slam toolbox yaml here if you have one.
-    slam_params_file = os.path.join(
+    default_slam_params_file = os.path.join(
         get_package_share_directory('slam_toolbox'),
         'config',
         'mapper_params_online_async.yaml'
     )
+    slam_overlay_params_file = os.path.join(
+        package_dir,
+        'params',
+        'slam_toolbox_dynamic_overlay.yaml'
+    )
 
     for robot in robots:
         namespace = robot['name']
+
+        map_frame = f'{namespace}/map'
+        odom_frame = f'{namespace}/odom'
+        base_frame = f'{namespace}/base_footprint'
 
         ld.add_action(Node(
             package='slam_toolbox',
@@ -45,22 +53,53 @@ def generate_launch_description():
             namespace=namespace,
             output='screen',
             parameters=[
-                slam_params_file,
+                default_slam_params_file,
+                slam_overlay_params_file,
                 {
                     'use_sim_time': use_sim_time,
-                    'odom_frame': 'odom',
-                    'base_frame': 'base_footprint',
-                    'map_frame': 'map',
-                    'scan_topic': 'scan',
+                    'odom_frame': odom_frame,
+                    'base_frame': base_frame,
+                    'map_frame': map_frame,
+                    'scan_topic': f'/{namespace}/scan',
+                    'transform_timeout': 0.5,
+                    'tf_buffer_duration': 30.0,
+                    'map_update_interval': 0.2,
+                    'throttle_scans': 1,
+                    'minimum_travel_distance': 0.0,
+                    'minimum_travel_heading': 0.0
                 }
             ],
             remappings=[
-                ('/scan', 'scan'),
-                ('/map', 'map'),
-                ('/map_metadata', 'map_metadata'),
-                ('/tf', 'tf'),
-                ('/tf_static', 'tf_static'),
+                ('/scan', f'/{namespace}/scan'),
+                ('/map', f'/{namespace}/map'),
+                ('/map_metadata', f'/{namespace}/map_metadata'),
+                ('/map_updates', f'/{namespace}/map_updates'),
             ]
         ))
+    
+    ld.add_action(Node(
+        package='nav2_map_server',
+        executable='map_saver_server',
+        name='map_saver',
+        output='screen',
+        parameters=[{
+            'use_sim_time': use_sim_time,
+            'save_map_timeout': 5000.0,
+            'free_thresh_default': 0.25,
+            'occupied_thresh_default': 0.65,
+        }]
+    ))
+
+    ld.add_action(Node(
+        package='nav2_lifecycle_manager',
+        executable='lifecycle_manager',
+        name='lifecycle_manager_map_saver',
+        output='screen',
+        parameters=[{
+            'use_sim_time': use_sim_time,
+            'autostart': True,
+            'node_names': ['map_saver']
+        }]
+    ))
 
     return ld

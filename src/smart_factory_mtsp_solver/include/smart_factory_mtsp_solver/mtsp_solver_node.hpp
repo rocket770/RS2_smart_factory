@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <thread>
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -17,6 +18,7 @@ class MtspSolverNode : public rclcpp::Node
 {
 public:
   MtspSolverNode();
+  ~MtspSolverNode();
 
 private:
   void start_solver();
@@ -36,6 +38,7 @@ private:
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr progress_publisher_;
   rclcpp::TimerBase::SharedPtr startup_timer_;
   bool started_;
+  std::thread solver_thread_;
 };
 
 }  // namespace smart_factory_mtsp_solver

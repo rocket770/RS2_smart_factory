@@ -19,13 +19,13 @@
 #!/usr/bin/env python3
 
 import os
+import yaml
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-
 
 def generate_launch_description():
     TURTLEBOT3_MODEL = os.environ['TURTLEBOT3_MODEL']
@@ -45,7 +45,7 @@ def generate_launch_description():
             'param',
             TURTLEBOT3_MODEL + '.yaml'))
 
-    remappings = [('/tf', 'tf'), ('/tf_static', 'tf_static')]
+    remappings = []#[('/tf', 'tf'), ('/tf_static', 'tf_static')]
 
     # Declare launch arguments
     ld = LaunchDescription([
@@ -61,6 +61,9 @@ def generate_launch_description():
                               description='USB port for lidar'),
         DeclareLaunchArgument('frame_id', default_value=frame_id,
                               description='Frame ID of lidar (default: laser)'),
+        DeclareLaunchArgument('x_pose', default_value='0.0'),
+        DeclareLaunchArgument('y_pose', default_value='0.0'),
+        DeclareLaunchArgument('z_pose', default_value='0.0'),
     ])
 
     urdf_file_name = f'turtlebot3_{TURTLEBOT3_MODEL}.urdf'
@@ -76,7 +79,12 @@ def generate_launch_description():
         namespace=namespace,
         executable='robot_state_publisher',
         output='screen',
-        parameters=[{'use_sim_time': use_sim_time}],
+        parameters=[
+            {
+                'use_sim_time': use_sim_time,
+                'frame_prefix': [namespace, '/'] 
+            }
+        ],
         remappings=remappings,
         arguments=[urdf],
     )
@@ -88,10 +96,14 @@ def generate_launch_description():
         namespace=namespace,
         executable='hlds_laser_publisher',
         name='hlds_laser_publisher',
-        parameters=[{'port': lidar_port, 'frame_id': frame_id}],
+        parameters=[
+            {
+                'port': lidar_port,
+                'frame_id': [namespace, '/base_scan']
+            }
+        ],
         output='screen'
     )
-    ld.add_action(laser_scan)
 
     # TurtleBot3 core node
     node = Node(
@@ -106,5 +118,22 @@ def generate_launch_description():
         output='screen'
     )
     ld.add_action(node)
+
+
+    x_pose = LaunchConfiguration('x_pose')
+    y_pose = LaunchConfiguration('y_pose')
+    z_pose = LaunchConfiguration('z_pose')
+
+    ld.add_action(Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='world_to_map',
+        arguments=[
+            x_pose, y_pose, z_pose,
+            '0', '0', '0',
+            'world',
+            [namespace, '/map']
+        ]
+    ))
 
     return ld

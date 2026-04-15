@@ -1,5 +1,0 @@
-[console_scripts]
-add_task_cli = smart_factory_ui.add_task_cli:main
-mtsp_planner_gui = smart_factory_ui.mtsp_planner_gui:main
-smart_factory_gui = smart_factory_ui.main:main
-
