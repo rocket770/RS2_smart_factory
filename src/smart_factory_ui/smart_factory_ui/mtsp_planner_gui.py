@@ -673,12 +673,16 @@ import json
 import os
 import signal
 import subprocess
+import tempfile
 import time
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import rclpy
+import yaml
+from action_msgs.msg import GoalStatus
+from rclpy.action import ActionClient
 from rclpy.node import Node
 from rclpy.qos import (
     qos_profile_sensor_data,
@@ -689,6 +693,7 @@ from rclpy.qos import (
 )
 
 from std_msgs.msg import String
+from nav2_msgs.action import NavigateToPose
 from nav2_msgs.srv import SaveMap
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, TransformStamped
@@ -1090,11 +1095,19 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.ros_node = ros_node
         self.nav_process: Optional[subprocess.Popen] = None
+        self.solver_process: Optional[subprocess.Popen] = None
+        self._solver_params_path: Optional[str] = None
         self._pending_explorer_start = False
         self._explorer_start_deadline = 0.0
         self._explorer_next_attempt = 0.0
         self._explorer_start_future = None
         self._explorer_wait_logged = False
+        self._planned_robot_names: List[str] = []
+        self._nav_action_clients: Dict[str, ActionClient] = {}
+        self._execution_active = False
+        self._execution_routes: Dict[str, List[int]] = {}
+        self._execution_progress: Dict[str, int] = {}
+        self._execution_goal_handles: Dict[str, object] = {}
 
         self.setWindowTitle("MTSP Planner GUI")
         self.resize(1400, 900)
@@ -1319,6 +1332,7 @@ class MainWindow(QMainWindow):
         self.map_canvas.redraw()
         self._refresh_lists()
         self._refresh_result_summary()
+        self._refresh_solver_process_state()
         self._refresh_nav_process_state()
 
     def _refresh_lists(self):
@@ -1562,6 +1576,22 @@ class MainWindow(QMainWindow):
         self.log(f"Nav stack exited with code {code}.")
         self.nav_process = None
 
+    def _refresh_solver_process_state(self):
+        if self.solver_process is None:
+            return
+        code = self.solver_process.poll()
+        if code is None:
+            return
+        self.log(f"MTSP solver exited with code {code}.")
+        if code == 0 and self.ros_node.latest_result is not None:
+            self.log("MTSP solution received and rendered on the map.")
+        elif code == 0:
+            self.log("MTSP solver exited cleanly, but no mtsp_best_solution was received.")
+        else:
+            self.log("MTSP solver failed before producing a valid result.")
+        self.solver_process = None
+        self._cleanup_solver_params_file()
+
     def on_run_clicked(self):
         if not self.map_canvas.goal_points:
             QMessageBox.warning(self, "No Goals", "Add at least one goal on the map.")
@@ -1571,20 +1601,91 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "No Robot Starts", "Set at least one robot start on the map.")
             return
 
+        if self._execution_active:
+            QMessageBox.warning(self, "Execution Active", "Stop or finish the current execution before running MTSP again.")
+            return
+
+        if self.solver_process is not None and self.solver_process.poll() is None:
+            QMessageBox.information(self, "Solver Running", "The MTSP solver is already running.")
+            return
+
         config = self.build_run_config()
         self.summary_box.setPlainText(json.dumps(config, indent=2))
-        self.log("Run requested.")
-        self.log("Placeholder: this is where you would call the solver service/action/process.")
+        self.ros_node.latest_result = None
+        self._planned_robot_names = sorted(self.map_canvas.robot_starts.keys())
 
-        # Suggested integration options:
-        # 1. Call a dedicated ROS2 service on the MTSP solver node.
-        # 2. Publish a request message to a planner topic.
-        # 3. Spawn the existing solver executable with a temp YAML file.
-        # 4. Refactor the solver into a library and invoke directly in-process.
+        try:
+            params_path = self._write_solver_params_file(config)
+            self._solver_params_path = params_path
+            cmd = [
+                "ros2",
+                "run",
+                "smart_factory_mtsp_solver",
+                "mtsp_solver_node",
+                "--ros-args",
+                "--params-file",
+                params_path,
+            ]
+            self.solver_process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                preexec_fn=os.setsid,
+            )
+            self.log("Run requested.")
+            self.log("Started MTSP solver: " + " ".join(cmd))
+            self.result_label.setText("Running MTSP solver...")
+        except Exception as exc:
+            self._cleanup_solver_params_file()
+            QMessageBox.critical(self, "Run Failed", f"Failed to start MTSP solver: {exc}")
+            self.log(f"Failed to start MTSP solver: {exc}")
 
     def on_start_clicked(self):
+        result = self.ros_node.latest_result
+        if result is None:
+            QMessageBox.warning(self, "No Plan", "Run MTSP and wait for a solution before starting execution.")
+            return
+
+        if self._execution_active:
+            QMessageBox.information(self, "Already Executing", "The MTSP execution is already running.")
+            return
+
+        if not self._planned_robot_names:
+            QMessageBox.warning(self, "No Planned Robots", "No robot plan is available. Run MTSP again.")
+            return
+
+        if len(result.routes) != len(self._planned_robot_names):
+            QMessageBox.warning(
+                self,
+                "Plan Mismatch",
+                "The latest MTSP result does not match the selected robot set. Run MTSP again before executing.",
+            )
+            return
+
+        self._execution_active = True
+        self._execution_routes = {
+            ns: list(route) for ns, route in zip(self._planned_robot_names, result.routes)
+        }
+        self._execution_progress = {ns: 0 for ns in self._planned_robot_names}
+        self._execution_goal_handles = {}
+
         self.log("Start requested.")
-        self.log("Placeholder: publish per-robot ordered goals one by one here.")
+        self.log("Executing MTSP routes through Nav2.")
+
+        active_robot_count = 0
+        for ns in self._planned_robot_names:
+            route = self._execution_routes.get(ns, [])
+            if not route:
+                self.log(f"{ns}: no assigned goals.")
+                self._execution_routes.pop(ns, None)
+                self._execution_progress.pop(ns, None)
+                continue
+            active_robot_count += 1
+            self._dispatch_next_goal(ns)
+
+        if active_robot_count == 0:
+            self.log("MTSP solution contains no goals to execute.")
+            self._execution_active = False
 
     def on_dump_clicked(self):
         config = self.build_run_config()
@@ -1613,10 +1714,143 @@ class MainWindow(QMainWindow):
                     "mutation_rate": self.mutation_rate.value(),
                     "seed": self.seed.value(),
                     "publish_progress": True,
+                    "publish_generation_delay": 1,
                     "generation_delay_ms": self.generation_delay_ms.value(),
+                    "distance_backend": "euclidean",
                 }
             }
         }
+
+    def _write_solver_params_file(self, config: dict) -> str:
+        self._cleanup_solver_params_file()
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            prefix="mtsp_gui_",
+            suffix=".yaml",
+            dir="/tmp",
+            delete=False,
+        ) as tmp:
+            yaml.safe_dump(config, tmp, sort_keys=False)
+            return tmp.name
+
+    def _cleanup_solver_params_file(self):
+        if not self._solver_params_path:
+            return
+        try:
+            os.unlink(self._solver_params_path)
+        except FileNotFoundError:
+            pass
+        except Exception as exc:
+            self.log(f"Warning: failed to remove temp solver params file: {exc}")
+        finally:
+            self._solver_params_path = None
+
+    def _get_nav_client(self, namespace: str) -> ActionClient:
+        client = self._nav_action_clients.get(namespace)
+        if client is None:
+            client = ActionClient(self.ros_node, NavigateToPose, f"/{namespace}/navigate_to_pose")
+            self._nav_action_clients[namespace] = client
+        return client
+
+    def _dispatch_next_goal(self, namespace: str):
+        if not self._execution_active:
+            return
+
+        result = self.ros_node.latest_result
+        if result is None:
+            self.log(f"{namespace}: execution stopped because the MTSP result is no longer available.")
+            self._mark_robot_execution_complete(namespace)
+            return
+
+        route = self._execution_routes.get(namespace, [])
+        goal_cursor = self._execution_progress.get(namespace, 0)
+        if goal_cursor >= len(route):
+            self.log(f"{namespace}: completed assigned MTSP route.")
+            self._mark_robot_execution_complete(namespace)
+            return
+
+        goal_index = route[goal_cursor]
+        if goal_index < 0 or goal_index >= len(result.goals):
+            self.log(f"{namespace}: invalid goal index {goal_index} in MTSP route.")
+            self._mark_robot_execution_complete(namespace)
+            return
+
+        client = self._get_nav_client(namespace)
+        if not client.wait_for_server(timeout_sec=1.0):
+            self.log(f"{namespace}: navigate_to_pose action server is not ready.")
+            self._mark_robot_execution_complete(namespace)
+            return
+
+        gx, gy = result.goals[goal_index]
+        goal_msg = NavigateToPose.Goal()
+        goal_msg.pose = self._build_pose_stamped(gx, gy)
+
+        self.log(f"{namespace}: sending goal G{goal_index} -> ({gx:.2f}, {gy:.2f})")
+        future = client.send_goal_async(goal_msg)
+        future.add_done_callback(
+            lambda fut, ns=namespace, goal_idx=goal_index: self._on_goal_response(ns, goal_idx, fut)
+        )
+
+    def _build_pose_stamped(self, x: float, y: float) -> PoseStamped:
+        pose = PoseStamped()
+        pose.header.frame_id = "map"
+        pose.header.stamp = self.ros_node.get_clock().now().to_msg()
+        pose.pose.position.x = float(x)
+        pose.pose.position.y = float(y)
+        pose.pose.position.z = 0.0
+        pose.pose.orientation.w = 1.0
+        return pose
+
+    def _on_goal_response(self, namespace: str, goal_index: int, future):
+        try:
+            goal_handle = future.result()
+        except Exception as exc:
+            self.log(f"{namespace}: failed to send goal G{goal_index}: {exc}")
+            self._mark_robot_execution_complete(namespace)
+            return
+
+        if not goal_handle.accepted:
+            self.log(f"{namespace}: goal G{goal_index} was rejected by Nav2.")
+            self._mark_robot_execution_complete(namespace)
+            return
+
+        self._execution_goal_handles[namespace] = goal_handle
+        self.log(f"{namespace}: goal G{goal_index} accepted.")
+        result_future = goal_handle.get_result_async()
+        result_future.add_done_callback(
+            lambda fut, ns=namespace, goal_idx=goal_index: self._on_goal_result(ns, goal_idx, fut)
+        )
+
+    def _on_goal_result(self, namespace: str, goal_index: int, future):
+        self._execution_goal_handles.pop(namespace, None)
+        try:
+            wrapped_result = future.result()
+        except Exception as exc:
+            self.log(f"{namespace}: failed while waiting for goal G{goal_index}: {exc}")
+            self._mark_robot_execution_complete(namespace)
+            return
+
+        status = wrapped_result.status
+        if status == GoalStatus.STATUS_SUCCEEDED:
+            self.log(f"{namespace}: reached goal G{goal_index}.")
+            self._execution_progress[namespace] = self._execution_progress.get(namespace, 0) + 1
+            self._dispatch_next_goal(namespace)
+            return
+
+        self.log(f"{namespace}: goal G{goal_index} ended with status {status}.")
+        self._mark_robot_execution_complete(namespace)
+
+    def _mark_robot_execution_complete(self, namespace: str):
+        self._execution_routes.pop(namespace, None)
+        self._execution_progress.pop(namespace, None)
+        self._execution_goal_handles.pop(namespace, None)
+
+        if self._execution_routes:
+            return
+
+        if self._execution_active:
+            self.log("MTSP execution finished.")
+        self._execution_active = False
 
     def log(self, message: str):
         self.log_box.append(message)
@@ -1637,6 +1871,12 @@ def main():
     try:
         app.exec_()
     finally:
+        if window.solver_process is not None and window.solver_process.poll() is None:
+            try:
+                os.killpg(os.getpgid(window.solver_process.pid), signal.SIGTERM)
+            except Exception:
+                pass
+        window._cleanup_solver_params_file()
         if window.nav_process is not None and window.nav_process.poll() is None:
             try:
                 os.killpg(os.getpgid(window.nav_process.pid), signal.SIGTERM)
