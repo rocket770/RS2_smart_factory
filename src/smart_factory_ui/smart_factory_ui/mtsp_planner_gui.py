@@ -855,17 +855,18 @@ class MapCanvas(QLabel):
         QColor("#7f7f7f"),
     ]
 
-    def __init__(self, ros_node: MtspPlannerGuiNode, log_fn):
+    def __init__(self, ros_node: MtspPlannerGuiNode, log_fn, manual_move_callback):
         super().__init__()
         self.ros_node = ros_node
         self.log = log_fn
+        self.manual_move_callback = manual_move_callback
 
         self.setMinimumSize(700, 700)
         self.setAlignment(Qt.AlignCenter)
         self.setStyleSheet("background-color: #222; border: 1px solid #555;")
         self.setText("Waiting for merged /map...")
 
-        self.display_mode = "goal"  # goal | robot_start
+        self.display_mode = "goal"  # goal | move_robot
         self.selected_robot_namespace = "tb1"
 
         self.goal_points: List[WorldPoint] = []
@@ -942,8 +943,9 @@ class MapCanvas(QLabel):
         else:
             self.robot_starts[self.selected_robot_namespace] = WorldPoint(*world)
             self.log(
-                f"Set {self.selected_robot_namespace} start to ({world[0]:.2f}, {world[1]:.2f})"
+                f"Set manual move target for {self.selected_robot_namespace} to ({world[0]:.2f}, {world[1]:.2f})"
             )
+            self.manual_move_callback(self.selected_robot_namespace, WorldPoint(*world))
 
         self.redraw()
 
@@ -972,7 +974,7 @@ class MapCanvas(QLabel):
             painter.drawLine(int(px - 6), int(py + 6), int(px + 6), int(py - 6))
             painter.drawText(int(px + 8), int(py - 8), f"G{idx}")
 
-        # Draw selected robot start points
+        # Draw manual move targets
         for i, ns in enumerate(sorted(self.robot_starts.keys())):
             point = self.robot_starts[ns]
             px, py = self._world_to_widget(point.x, point.y)
@@ -982,7 +984,7 @@ class MapCanvas(QLabel):
             painter.setPen(QPen(color, 2))
             painter.setBrush(QBrush(color))
             painter.drawEllipse(QPointF(px, py), 7, 7)
-            painter.drawText(int(px + 8), int(py - 8), f"{ns} start")
+            painter.drawText(int(px + 8), int(py - 8), f"{ns} target")
 
         # Draw live robot positions from TF
         ns_list = self.ros_node.robot_namespaces
@@ -1097,6 +1099,7 @@ class MainWindow(QMainWindow):
         self.nav_process: Optional[subprocess.Popen] = None
         self.solver_process: Optional[subprocess.Popen] = None
         self._solver_params_path: Optional[str] = None
+        self._solver_log_path: Optional[str] = None
         self._pending_explorer_start = False
         self._explorer_start_deadline = 0.0
         self._explorer_next_attempt = 0.0
@@ -1108,6 +1111,7 @@ class MainWindow(QMainWindow):
         self._execution_routes: Dict[str, List[int]] = {}
         self._execution_progress: Dict[str, int] = {}
         self._execution_goal_handles: Dict[str, object] = {}
+        self._manual_goal_handles: Dict[str, object] = {}
 
         self.setWindowTitle("MTSP Planner GUI")
         self.resize(1400, 900)
@@ -1121,7 +1125,7 @@ class MainWindow(QMainWindow):
 
 
         # Create map canvas before building controls that connect to it
-        self.map_canvas = MapCanvas(self.ros_node, self.log)
+        self.map_canvas = MapCanvas(self.ros_node, self.log, self._send_manual_robot_goal)
 
         # Left panel
         left = QWidget()
@@ -1176,7 +1180,9 @@ class MainWindow(QMainWindow):
         row1.addWidget(self.nav_mode_combo)
         layout.addLayout(row1)
 
-        row2 = QHBoxLayout()
+        self.amcl_controls = QWidget()
+        row2 = QHBoxLayout(self.amcl_controls)
+        row2.setContentsMargins(0, 0, 0, 0)
         self.map_path_input = QLineEdit()
         self.map_path_input.setPlaceholderText("/home/nick/maps/factory_merged.yaml")
         self.map_path_input.setText("/home/nick/maps/factory_merged.yaml")
@@ -1185,7 +1191,7 @@ class MainWindow(QMainWindow):
         self.browse_map_btn = QPushButton("Browse")
         self.browse_map_btn.clicked.connect(self.on_browse_map_clicked)
         row2.addWidget(self.browse_map_btn)
-        layout.addLayout(row2)
+        layout.addWidget(self.amcl_controls)
 
         row3 = QHBoxLayout()
         self.start_nav_btn = QPushButton("Start Nav Stack")
@@ -1197,7 +1203,9 @@ class MainWindow(QMainWindow):
         row3.addWidget(self.stop_nav_btn)
         layout.addLayout(row3)
 
-        row4 = QHBoxLayout()
+        self.slam_controls = QWidget()
+        row4 = QHBoxLayout(self.slam_controls)
+        row4.setContentsMargins(0, 0, 0, 0)
         self.save_map_path_input = QLineEdit()
         self.save_map_path_input.setPlaceholderText("/home/nick/maps/factory_merged")
         self.save_map_path_input.setText("/home/nick/maps/factory_merged")
@@ -1206,7 +1214,7 @@ class MainWindow(QMainWindow):
         self.save_map_btn = QPushButton("Save Map")
         self.save_map_btn.clicked.connect(self.on_save_map_clicked)
         row4.addWidget(self.save_map_btn)
-        layout.addLayout(row4)
+        layout.addWidget(self.slam_controls)
 
         self.nav_status_label = QLabel("Nav stack not launched from GUI.")
         layout.addWidget(self.nav_status_label)
@@ -1220,7 +1228,7 @@ class MainWindow(QMainWindow):
 
         row = QHBoxLayout()
         self.mode_combo = QComboBox()
-        self.mode_combo.addItems(["goal", "robot_start"])
+        self.mode_combo.addItems(["goal", "move_robot"])
         self.mode_combo.currentTextChanged.connect(self.map_canvas.set_display_mode)
         row.addWidget(QLabel("Click mode:"))
         row.addWidget(self.mode_combo)
@@ -1237,7 +1245,7 @@ class MainWindow(QMainWindow):
         clear_goals_btn.clicked.connect(self.map_canvas.clear_goals)
         buttons.addWidget(clear_goals_btn)
 
-        clear_starts_btn = QPushButton("Clear Robot Starts")
+        clear_starts_btn = QPushButton("Clear Move Targets")
         clear_starts_btn.clicked.connect(self.map_canvas.clear_robot_starts)
         buttons.addWidget(clear_starts_btn)
         layout.addLayout(buttons)
@@ -1255,7 +1263,7 @@ class MainWindow(QMainWindow):
 
         self.start_list = QListWidget()
         self.start_list.setMinimumHeight(120)
-        layout.addWidget(QLabel("Robot starts"))
+        layout.addWidget(QLabel("Robot positions"))
         layout.addWidget(self.start_list)
 
         return group
@@ -1341,9 +1349,15 @@ class MainWindow(QMainWindow):
             self.goal_list.addItem(QListWidgetItem(f"G{i}: ({p.x:.2f}, {p.y:.2f})"))
 
         self.start_list.clear()
-        for ns in sorted(self.map_canvas.robot_starts.keys()):
-            p = self.map_canvas.robot_starts[ns]
-            self.start_list.addItem(QListWidgetItem(f"{ns}: ({p.x:.2f}, {p.y:.2f})"))
+        for ns in self.ros_node.robot_namespaces:
+            live = self.ros_node.robot_positions.get(ns)
+            if live is None:
+                continue
+            suffix = ""
+            target = self.map_canvas.robot_starts.get(ns)
+            if target is not None:
+                suffix = f" -> target ({target.x:.2f}, {target.y:.2f})"
+            self.start_list.addItem(QListWidgetItem(f"{ns}: ({live[0]:.2f}, {live[1]:.2f}) [live]{suffix}"))
 
     def _refresh_result_summary(self):
         result = self.ros_node.latest_result
@@ -1364,14 +1378,16 @@ class MainWindow(QMainWindow):
         for i, route in enumerate(result.routes):
             lines.append(f"robot {i}: {route}")
         self.summary_box.setPlainText("\n".join(lines))
+        if self.solver_process is not None:
+            self.result_label.setText(
+                f"Solution received at generation {result.generation} | Best Cost = {result.cost:.3f}"
+            )
 
     def on_nav_mode_changed(self, mode_text: str):
         using_amcl = mode_text == "Load Existing Map (AMCL)"
         using_slam = not using_amcl
-        self.map_path_input.setEnabled(using_amcl)
-        self.browse_map_btn.setEnabled(using_amcl)
-        self.save_map_path_input.setEnabled(using_slam)
-        self.save_map_btn.setEnabled(using_slam)
+        self.amcl_controls.setVisible(using_amcl)
+        self.slam_controls.setVisible(using_slam)
         if using_amcl:
             self.nav_status_label.setText("AMCL mode selected. Choose a saved map YAML.")
         else:
@@ -1585,20 +1601,41 @@ class MainWindow(QMainWindow):
         self.log(f"MTSP solver exited with code {code}.")
         if code == 0 and self.ros_node.latest_result is not None:
             self.log("MTSP solution received and rendered on the map.")
+            self.result_label.setText(
+                f"Solution received | Generation {self.ros_node.latest_result.generation} | Best Cost = {self.ros_node.latest_result.cost:.3f}"
+            )
         elif code == 0:
             self.log("MTSP solver exited cleanly, but no mtsp_best_solution was received.")
+            self.result_label.setText("MTSP solver finished, but no solution was received.")
+            solver_output = self._read_solver_log_tail()
+            if solver_output:
+                self.log("MTSP solver output:")
+                for line in solver_output.splitlines():
+                    self.log(line)
         else:
             self.log("MTSP solver failed before producing a valid result.")
+            self.result_label.setText(f"MTSP solver failed with exit code {code}.")
+            solver_output = self._read_solver_log_tail()
+            if solver_output:
+                self.log("MTSP solver output:")
+                for line in solver_output.splitlines():
+                    self.log(line)
         self.solver_process = None
         self._cleanup_solver_params_file()
+        self._cleanup_solver_log_file()
 
     def on_run_clicked(self):
         if not self.map_canvas.goal_points:
             QMessageBox.warning(self, "No Goals", "Add at least one goal on the map.")
             return
 
-        if not self.map_canvas.robot_starts:
-            QMessageBox.warning(self, "No Robot Starts", "Set at least one robot start on the map.")
+        effective_robot_starts = self._effective_robot_starts()
+        if not effective_robot_starts:
+            QMessageBox.warning(
+                self,
+                "No Robot Starts",
+                "No robot positions are available yet. Wait for live robot TF or set robot starts manually on the map.",
+            )
             return
 
         if self._execution_active:
@@ -1612,11 +1649,13 @@ class MainWindow(QMainWindow):
         config = self.build_run_config()
         self.summary_box.setPlainText(json.dumps(config, indent=2))
         self.ros_node.latest_result = None
-        self._planned_robot_names = sorted(self.map_canvas.robot_starts.keys())
+        self._planned_robot_names = [ns for ns, _, _ in effective_robot_starts]
 
         try:
             params_path = self._write_solver_params_file(config)
             self._solver_params_path = params_path
+            log_path = self._create_solver_log_file()
+            self._solver_log_path = log_path
             cmd = [
                 "ros2",
                 "run",
@@ -1626,17 +1665,21 @@ class MainWindow(QMainWindow):
                 "--params-file",
                 params_path,
             ]
+            log_handle = open(log_path, "w", encoding="utf-8")
             self.solver_process = subprocess.Popen(
                 cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=log_handle,
+                stderr=subprocess.STDOUT,
                 preexec_fn=os.setsid,
             )
+            log_handle.close()
             self.log("Run requested.")
             self.log("Started MTSP solver: " + " ".join(cmd))
-            self.result_label.setText("Running MTSP solver...")
+            self.log(f"Solver log: {log_path}")
+            self.result_label.setText("MTSP solver launching...")
         except Exception as exc:
             self._cleanup_solver_params_file()
+            self._cleanup_solver_log_file()
             QMessageBox.critical(self, "Run Failed", f"Failed to start MTSP solver: {exc}")
             self.log(f"Failed to start MTSP solver: {exc}")
 
@@ -1693,10 +1736,10 @@ class MainWindow(QMainWindow):
         self.log("Dumped current run config to summary pane.")
 
     def build_run_config(self) -> dict:
-        robot_names = sorted(self.map_canvas.robot_starts.keys())
+        effective_robot_starts = self._effective_robot_starts()
+        robot_names = [ns for ns, _, _ in effective_robot_starts]
         robot_starts_flat = []
-        for ns in robot_names:
-            p = self.map_canvas.robot_starts[ns]
+        for _, p, _ in effective_robot_starts:
             robot_starts_flat.extend([round(p.x, 4), round(p.y, 4)])
 
         goals_flat = []
@@ -1714,12 +1757,20 @@ class MainWindow(QMainWindow):
                     "mutation_rate": self.mutation_rate.value(),
                     "seed": self.seed.value(),
                     "publish_progress": True,
-                    "publish_generation_delay": 1,
+                    "publish_generation_delay": 1.0,
                     "generation_delay_ms": self.generation_delay_ms.value(),
                     "distance_backend": "euclidean",
                 }
             }
         }
+
+    def _effective_robot_starts(self) -> List[Tuple[str, WorldPoint, str]]:
+        starts: List[Tuple[str, WorldPoint, str]] = []
+        for ns in self.ros_node.robot_namespaces:
+            live = self.ros_node.robot_positions.get(ns)
+            if live is not None:
+                starts.append((ns, WorldPoint(float(live[0]), float(live[1])), "live"))
+        return starts
 
     def _write_solver_params_file(self, config: dict) -> str:
         self._cleanup_solver_params_file()
@@ -1731,6 +1782,17 @@ class MainWindow(QMainWindow):
             delete=False,
         ) as tmp:
             yaml.safe_dump(config, tmp, sort_keys=False)
+            return tmp.name
+
+    def _create_solver_log_file(self) -> str:
+        self._cleanup_solver_log_file()
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            prefix="mtsp_solver_",
+            suffix=".log",
+            dir="/tmp",
+            delete=False,
+        ) as tmp:
             return tmp.name
 
     def _cleanup_solver_params_file(self):
@@ -1745,12 +1807,86 @@ class MainWindow(QMainWindow):
         finally:
             self._solver_params_path = None
 
+    def _cleanup_solver_log_file(self):
+        if not self._solver_log_path:
+            return
+        try:
+            os.unlink(self._solver_log_path)
+        except FileNotFoundError:
+            pass
+        except Exception as exc:
+            self.log(f"Warning: failed to remove temp solver log file: {exc}")
+        finally:
+            self._solver_log_path = None
+
+    def _read_solver_log_tail(self, max_lines: int = 20) -> str:
+        if not self._solver_log_path or not os.path.exists(self._solver_log_path):
+            return ""
+        try:
+            with open(self._solver_log_path, "r", encoding="utf-8", errors="replace") as handle:
+                lines = handle.readlines()
+            return "".join(lines[-max_lines:]).strip()
+        except Exception as exc:
+            return f"Unable to read solver log: {exc}"
+
     def _get_nav_client(self, namespace: str) -> ActionClient:
         client = self._nav_action_clients.get(namespace)
         if client is None:
             client = ActionClient(self.ros_node, NavigateToPose, f"/{namespace}/navigate_to_pose")
             self._nav_action_clients[namespace] = client
         return client
+
+    def _send_manual_robot_goal(self, namespace: str, point: WorldPoint):
+        if self._execution_active:
+            self.log(f"{namespace}: manual move ignored while MTSP execution is active.")
+            return
+
+        client = self._get_nav_client(namespace)
+        if not client.wait_for_server(timeout_sec=1.0):
+            self.log(f"{namespace}: cannot send manual move, navigate_to_pose action server is not ready.")
+            return
+
+        goal_msg = NavigateToPose.Goal()
+        goal_msg.pose = self._build_pose_stamped(point.x, point.y)
+
+        self.log(f"{namespace}: sending manual move target -> ({point.x:.2f}, {point.y:.2f})")
+        future = client.send_goal_async(goal_msg)
+        future.add_done_callback(
+            lambda fut, ns=namespace, target=point: self._on_manual_goal_response(ns, target, fut)
+        )
+
+    def _on_manual_goal_response(self, namespace: str, target: WorldPoint, future):
+        try:
+            goal_handle = future.result()
+        except Exception as exc:
+            self.log(f"{namespace}: failed to send manual move target: {exc}")
+            return
+
+        if not goal_handle.accepted:
+            self.log(f"{namespace}: manual move target was rejected.")
+            return
+
+        self._manual_goal_handles[namespace] = goal_handle
+        self.log(f"{namespace}: manual move target accepted.")
+        result_future = goal_handle.get_result_async()
+        result_future.add_done_callback(
+            lambda fut, ns=namespace, target=target: self._on_manual_goal_result(ns, target, fut)
+        )
+
+    def _on_manual_goal_result(self, namespace: str, target: WorldPoint, future):
+        self._manual_goal_handles.pop(namespace, None)
+        try:
+            wrapped_result = future.result()
+        except Exception as exc:
+            self.log(f"{namespace}: failed while moving to manual target: {exc}")
+            return
+
+        status = wrapped_result.status
+        if status == GoalStatus.STATUS_SUCCEEDED:
+            self.log(f"{namespace}: reached manual target ({target.x:.2f}, {target.y:.2f}).")
+            return
+
+        self.log(f"{namespace}: manual move ended with status {status}.")
 
     def _dispatch_next_goal(self, namespace: str):
         if not self._execution_active:
@@ -1877,6 +2013,7 @@ def main():
             except Exception:
                 pass
         window._cleanup_solver_params_file()
+        window._cleanup_solver_log_file()
         if window.nav_process is not None and window.nav_process.poll() is None:
             try:
                 os.killpg(os.getpgid(window.nav_process.pid), signal.SIGTERM)
