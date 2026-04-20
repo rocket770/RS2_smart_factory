@@ -96,9 +96,16 @@ namespace smart_factory_mtsp_solver
     params.unused_robot_penalty = this->get_parameter("unused_robot_penalty").as_double();
     params.route_count_balance_penalty = this->get_parameter("route_count_balance_penalty").as_double();
     
-    const int publish_generation_delay = this->get_parameter("publish_generation_delay").as_double();
+    const int publish_generation_delay = static_cast<int>(this->get_parameter("publish_generation_delay").as_double());
     const bool publish_progress = this->get_parameter("publish_progress").as_bool();
     const int generation_delay_ms = this->get_parameter("generation_delay_ms").as_int();
+    const std::string planner_action_name = this->get_parameter("planner_action_name").as_string();
+    const std::string global_frame = this->get_parameter("global_frame").as_string();
+    const std::string planner_id = this->get_parameter("planner_id").as_string();
+    const auto planner_server_timeout =
+      std::chrono::milliseconds(this->get_parameter("planner_server_timeout_ms").as_int());
+    const auto planner_result_timeout =
+      std::chrono::milliseconds(this->get_parameter("planner_result_timeout_ms").as_int());
 
     const std::string distance_backend_str = this->get_parameter("distance_backend").as_string();
 
@@ -132,11 +139,11 @@ namespace smart_factory_mtsp_solver
     if (params.distance_backend == DistanceBackend::NAV2) {
       auto nav2_provider = std::make_unique<Nav2PathCostProvider>(
         this->shared_from_this(),
-        "/tb2/compute_path_to_pose",
-        "map",
-        "",
-        std::chrono::milliseconds(5000),
-        std::chrono::milliseconds(10000));
+        planner_action_name,
+        global_frame,
+        planner_id,
+        planner_server_timeout,
+        planner_result_timeout);
 
       if (!nav2_provider->wait_until_ready()) {
         throw std::runtime_error("Nav2 planner action server is not ready");

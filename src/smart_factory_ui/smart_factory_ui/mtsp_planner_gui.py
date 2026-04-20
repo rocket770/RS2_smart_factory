@@ -1746,6 +1746,8 @@ class MainWindow(QMainWindow):
         for p in self.map_canvas.goal_points:
             goals_flat.extend([round(p.x, 4), round(p.y, 4)])
 
+        planner_action_name = f"/{robot_names[0]}/compute_path_to_pose" if robot_names else "/tb1/compute_path_to_pose"
+
         return {
             "mtsp_solver_node": {
                 "ros__parameters": {
@@ -1759,7 +1761,12 @@ class MainWindow(QMainWindow):
                     "publish_progress": True,
                     "publish_generation_delay": 1.0,
                     "generation_delay_ms": self.generation_delay_ms.value(),
-                    "distance_backend": "euclidean",
+                    "distance_backend": "nav2",
+                    "planner_action_name": planner_action_name,
+                    "global_frame": "map",
+                    "planner_id": "",
+                    "planner_server_timeout_ms": 5000,
+                    "planner_result_timeout_ms": 10000,
                 }
             }
         }
