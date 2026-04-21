@@ -760,6 +760,7 @@ class MtspPlannerGuiNode(Node):
         self.robot_namespaces = ["tb1", "tb2", "tb3", "tb4"]
         self.save_map_client = self.create_client(SaveMap, "/map_saver/save_map")
         self.explorer_start_client = self.create_client(Trigger, "/multi_robot_explorer/start")
+        self.explorer_stop_client = self.create_client(Trigger, "/multi_robot_explorer/stop")
         self.explorer_return_home_client = self.create_client(Trigger, "/multi_robot_explorer/return_home")
         self.explorer_status_client = self.create_client(Trigger, "/multi_robot_explorer/status")
 
@@ -1114,6 +1115,7 @@ class MainWindow(QMainWindow):
         self._planned_robot_names: List[str] = []
         self._nav_action_clients: Dict[str, ActionClient] = {}
         self._execution_active = False
+        self._execution_paused = False
         self._execution_routes: Dict[str, List[int]] = {}
         self._execution_progress: Dict[str, int] = {}
         self._execution_goal_handles: Dict[str, object] = {}
@@ -1208,6 +1210,21 @@ class MainWindow(QMainWindow):
         self.stop_nav_btn.clicked.connect(self.on_stop_nav_clicked)
         row3.addWidget(self.stop_nav_btn)
         layout.addLayout(row3)
+
+        row_controls = QHBoxLayout()
+        self.pause_btn = QPushButton("Pause")
+        self.pause_btn.clicked.connect(self.on_pause_clicked)
+        row_controls.addWidget(self.pause_btn)
+
+        self.resume_btn = QPushButton("Resume")
+        self.resume_btn.clicked.connect(self.on_resume_clicked)
+        row_controls.addWidget(self.resume_btn)
+
+        self.estop_btn = QPushButton("Emergency Stop")
+        self.estop_btn.clicked.connect(self.on_emergency_stop_clicked)
+        self.estop_btn.setStyleSheet("background-color: #9b1c1c; color: white; font-weight: bold;")
+        row_controls.addWidget(self.estop_btn)
+        layout.addLayout(row_controls)
 
         self.slam_controls = QWidget()
         row4 = QHBoxLayout(self.slam_controls)
@@ -1656,6 +1673,97 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Stop Failed", f"Failed to stop nav stack: {exc}")
             self.log(f"Failed to stop nav stack: {exc}")
 
+    def on_pause_clicked(self):
+        self._clear_pending_explorer_start()
+        self._call_explorer_service(
+            self.ros_node.explorer_stop_client,
+            "pause",
+            unavailable_message="Explorer stop/pause service is not available. Nav2 stack may not be running.",
+        )
+
+        if self._execution_active:
+            self._execution_paused = True
+            self._cancel_gui_nav_goals(clear_execution=False)
+            self.log("MTSP execution paused. Active robot goals were cancelled and progress was kept.")
+        else:
+            self._cancel_manual_goals()
+            self.log("Pause requested. No MTSP execution is active.")
+
+        self.nav_status_label.setText("Paused. Use Resume to continue exploration or MTSP execution.")
+
+    def on_resume_clicked(self):
+        self._call_explorer_service(
+            self.ros_node.explorer_start_client,
+            "resume",
+            unavailable_message="Explorer start/resume service is not available. Nav2 stack may not be running.",
+        )
+
+        if self._execution_active and self._execution_paused:
+            self._execution_paused = False
+            self.log("Resuming MTSP execution from the current unfinished goals.")
+            for ns in list(self._execution_routes.keys()):
+                if ns not in self._execution_goal_handles:
+                    self._dispatch_next_goal(ns)
+        else:
+            self.log("Resume requested. Explorer will continue if SLAM exploration is active.")
+
+        self.nav_status_label.setText("Resume requested.")
+
+    def on_emergency_stop_clicked(self):
+        self._clear_pending_explorer_start()
+        self._call_explorer_service(
+            self.ros_node.explorer_stop_client,
+            "emergency stop",
+            unavailable_message="Explorer stop service is not available. Cancelling GUI goals only.",
+        )
+        self._cancel_gui_nav_goals(clear_execution=True)
+        self._cancel_manual_goals()
+        self.nav_status_label.setText("Emergency stop requested. Robot goals cancelled.")
+        self.log("Emergency stop requested. GUI-controlled Nav2 goals cancelled and MTSP execution cleared.")
+
+    def _call_explorer_service(self, client, action_name: str, unavailable_message: str):
+        if not client.wait_for_service(timeout_sec=0.2):
+            self.log(unavailable_message)
+            return
+
+        future = client.call_async(Trigger.Request())
+        future.add_done_callback(
+            lambda fut, action=action_name: self._on_explorer_control_response(action, fut)
+        )
+
+    def _on_explorer_control_response(self, action_name: str, future):
+        try:
+            resp = future.result()
+        except Exception as exc:
+            self.log(f"Explorer {action_name} request failed: {exc}")
+            return
+
+        self.log(f"Explorer {action_name} response: success={resp.success}; {resp.message}")
+
+    def _cancel_gui_nav_goals(self, clear_execution: bool):
+        for namespace, goal_handle in list(self._execution_goal_handles.items()):
+            try:
+                goal_handle.cancel_goal_async()
+                self.log(f"{namespace}: cancel requested for active MTSP goal.")
+            except Exception as exc:
+                self.log(f"{namespace}: failed to cancel active MTSP goal: {exc}")
+        self._execution_goal_handles.clear()
+
+        if clear_execution:
+            self._execution_active = False
+            self._execution_paused = False
+            self._execution_routes.clear()
+            self._execution_progress.clear()
+
+    def _cancel_manual_goals(self):
+        for namespace, goal_handle in list(self._manual_goal_handles.items()):
+            try:
+                goal_handle.cancel_goal_async()
+                self.log(f"{namespace}: cancel requested for manual move goal.")
+            except Exception as exc:
+                self.log(f"{namespace}: failed to cancel manual move goal: {exc}")
+        self._manual_goal_handles.clear()
+
     def _refresh_nav_process_state(self):
         if self.nav_process is None:
             return
@@ -1781,6 +1889,7 @@ class MainWindow(QMainWindow):
             return
 
         self._execution_active = True
+        self._execution_paused = False
         self._execution_routes = {
             ns: list(route) for ns, route in zip(self._planned_robot_names, result.routes)
         }
@@ -1971,7 +2080,7 @@ class MainWindow(QMainWindow):
         self.log(f"{namespace}: manual move ended with status {status}.")
 
     def _dispatch_next_goal(self, namespace: str):
-        if not self._execution_active:
+        if not self._execution_active or self._execution_paused:
             return
 
         result = self.ros_node.latest_result
@@ -2049,6 +2158,10 @@ class MainWindow(QMainWindow):
             return
 
         status = wrapped_result.status
+        if self._execution_paused and status in (GoalStatus.STATUS_CANCELED, GoalStatus.STATUS_CANCELING):
+            self.log(f"{namespace}: goal G{goal_index} paused before completion.")
+            return
+
         if status == GoalStatus.STATUS_SUCCEEDED:
             self.log(f"{namespace}: reached goal G{goal_index}.")
             self._execution_progress[namespace] = self._execution_progress.get(namespace, 0) + 1
@@ -2069,6 +2182,7 @@ class MainWindow(QMainWindow):
         if self._execution_active:
             self.log("MTSP execution finished.")
         self._execution_active = False
+        self._execution_paused = False
 
     def log(self, message: str):
         self.log_box.append(message)
