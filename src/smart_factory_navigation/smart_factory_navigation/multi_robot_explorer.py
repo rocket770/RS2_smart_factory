@@ -264,6 +264,7 @@ class MultiRobotExplorer(Node):
         self.start_srv = self.create_service(Trigger, '~/start', self._handle_start)
         self.pause_srv = self.create_service(Trigger, '~/pause', self._handle_pause)
         self.stop_srv = self.create_service(Trigger, '~/stop', self._handle_stop)
+        self.return_home_srv = self.create_service(Trigger, '~/return_home', self._handle_return_home)
         self.status_srv = self.create_service(Trigger, '~/status', self._handle_status)
 
         self.discovery_timer = self.create_timer(self.discovery_period_sec, self._discovery_tick)
@@ -313,6 +314,44 @@ class MultiRobotExplorer(Node):
         self._cancel_all_goals(clear_assignments=True)
         response.success = True
         response.message = 'Explorer stopped. Active goals cleared and reservations released.'
+        self.get_logger().info(response.message)
+        return response
+
+    def _handle_return_home(self, request, response):
+        del request
+        self.paused = True
+        self._cancel_all_goals(clear_assignments=True)
+        self._send_idle_robots_home()
+
+        returning = []
+        already_home = []
+        missing_home = []
+        missing_pose = []
+        for ns, robot in sorted(self.robots.items()):
+            if robot.home_pose_xy is None:
+                missing_home.append(ns)
+                continue
+            if robot.last_pose_xy is None:
+                missing_pose.append(ns)
+                continue
+            if robot.assigned_goal is not None and robot.assigned_goal.goal_kind == 'home':
+                returning.append(ns)
+                continue
+            if self._distance_xy(robot.last_pose_xy, robot.home_pose_xy) <= self.goal_tolerance_m:
+                already_home.append(ns)
+
+        parts = ['Explorer paused and existing return-home logic was requested.']
+        if returning:
+            parts.append('Returning: ' + ', '.join(returning))
+        if already_home:
+            parts.append('Already home: ' + ', '.join(already_home))
+        if missing_home:
+            parts.append('Missing home pose: ' + ', '.join(missing_home))
+        if missing_pose:
+            parts.append('Missing robot pose: ' + ', '.join(missing_pose))
+
+        response.success = bool(returning or already_home) and not missing_home and not missing_pose
+        response.message = ' '.join(parts)
         self.get_logger().info(response.message)
         return response
 
