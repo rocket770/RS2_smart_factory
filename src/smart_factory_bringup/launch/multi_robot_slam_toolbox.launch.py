@@ -61,8 +61,22 @@ def generate_launch_description():
                     'base_frame': base_frame,
                     'map_frame': map_frame,
                     'scan_topic': f'/{namespace}/scan',
-                    'transform_timeout': 0.5,
-                    'tf_buffer_duration': 30.0,
+                    'qos_overrides': {
+                        f'/{namespace}/scan': {
+                            'subscription': {'reliability': 'best_effort'},
+                        },
+                        f'/{namespace}/map': {
+                            'publisher': {'reliability': 'best_effort'},
+                        },
+                        f'/{namespace}/map_metadata': {
+                            'publisher': {'reliability': 'best_effort'},
+                        },
+                        f'/{namespace}/map_updates': {
+                            'publisher': {'reliability': 'best_effort'},
+                        },
+                    },
+                    # 'transform_timeout': 0.5,
+                    # 'tf_buffer_duration': 30.0,
                 }
             ],
             remappings=[
@@ -83,6 +97,11 @@ def generate_launch_description():
             'save_map_timeout': 5000.0,
             'free_thresh_default': 0.25,
             'occupied_thresh_default': 0.65,
+            'qos_overrides': {
+                '/map': {
+                    'subscription': {'reliability': 'best_effort'},
+                },
+            },
         }]
     ))
 

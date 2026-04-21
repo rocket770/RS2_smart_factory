@@ -120,6 +120,14 @@ def generate_launch_description():
             'use_sim_time': use_sim_time,
             'yaml_filename': map_file,
             'frame_id': 'map',
+            'qos_overrides': {
+                '/map': {
+                    'publisher': {'reliability': 'best_effort'},
+                },
+                '/map_metadata': {
+                    'publisher': {'reliability': 'best_effort'},
+                },
+            },
         }],
         condition=UnlessCondition(use_slam)
     ))

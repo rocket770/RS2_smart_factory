@@ -1,5 +1,6 @@
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from geometry_msgs.msg import PoseStamped
 from smart_factory_fleet_msgs.srv import AddTask
 from nav_msgs.msg import OccupancyGrid
@@ -11,12 +12,18 @@ class FleetGuiNode(Node):
         self.add_task_client = self.create_client(AddTask, "/add_task")
         # Map data
         self.latest_map = None
+        map_qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+        )
         # Subscribe to merged map
         self.map_sub = self.create_subscription(
             OccupancyGrid,
             "/map",
             self._on_map,
-            10
+            map_qos,
         )
         self.get_logger().info("Waiting for /add_task service...")
         if not self.add_task_client.wait_for_service(timeout_sec=10.0):

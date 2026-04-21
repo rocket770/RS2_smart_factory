@@ -44,6 +44,13 @@ amcl:
     z_short: 0.05
     scan_topic: __SCAN_TOPIC__
     map_topic: /map
+    qos_overrides:
+      __SCAN_TOPIC__:
+        subscription:
+          reliability: best_effort
+      /map:
+        subscription:
+          reliability: best_effort
 
 amcl_map_client:
   ros__parameters:
@@ -178,20 +185,6 @@ controller_server_rclcpp_node:
   ros__parameters:
     use_sim_time: False
 
-velocity_smoother:
-  ros__parameters:
-    use_sim_time: False
-    smoothing_frequency: 20.0
-    scale_velocities: False
-    feedback: "OPEN_LOOP"
-    max_velocity: [0.12, 0.0, 0.6]
-    min_velocity: [0.0, 0.0, -0.6]
-    max_accel: [0.08, 0.0, 0.8]
-    max_decel: [-0.12, 0.0, -1.0]
-    odom_topic: "odom"
-    odom_duration: 0.1
-    deadband_velocity: [0.0, 0.0, 0.0]
-    velocity_timeout: 1.0
 
 local_costmap:
   local_costmap:
@@ -208,6 +201,10 @@ local_costmap:
       footprint: "[[0.15, 0.16], [0.15, -0.16], [-0.15, -0.16], [-0.15, 0.16]]"
       always_send_full_costmap: True
       plugins: ["obstacle_layer", "inflation_layer"]
+      qos_overrides:
+        __SCAN_TOPIC__:
+          subscription:
+            reliability: best_effort
 
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
@@ -222,11 +219,11 @@ local_costmap:
           marking: True
           clearing: True
 
-          obstacle_min_range: 0.0
-          obstacle_max_range: 2.5
+          obstacle_min_range: 0.12
+          obstacle_max_range: 3.5
 
-          raytrace_min_range: 0.0
-          raytrace_max_range: 4.0
+          raytrace_min_range: 0.12
+          raytrace_max_range: 3.5
 
           observation_persistence: 0.0
           expected_update_rate: 0.0
@@ -258,6 +255,13 @@ global_costmap:
       track_unknown_space: true
       always_send_full_costmap: True
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      qos_overrides:
+        /map:
+          subscription:
+            reliability: best_effort
+        __SCAN_TOPIC__:
+          subscription:
+            reliability: best_effort
 
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
@@ -279,10 +283,10 @@ global_costmap:
           data_type: "LaserScan"
           marking: True
           clearing: True
-          obstacle_max_range: 2.5
-          raytrace_max_range: 3.0
-          obstacle_min_range: 0.0
-          raytrace_min_range: 0.0
+          obstacle_max_range: 3.5
+          raytrace_max_range: 3.5
+          obstacle_min_range: 0.12
+          raytrace_min_range: 0.12
           observation_persistence: 0.0
           expected_update_rate: 0.0
           max_obstacle_height: 2.0
@@ -299,6 +303,13 @@ map_server:
   ros__parameters:
     use_sim_time: False
     yaml_filename: "turtlebot3_world.yaml"
+    qos_overrides:
+      /map:
+        publisher:
+          reliability: best_effort
+      /map_metadata:
+        publisher:
+          reliability: best_effort
 
 map_saver:
   ros__parameters:
@@ -307,6 +318,10 @@ map_saver:
     free_thresh_default: 0.25
     occupied_thresh_default: 0.65
     map_subscribe_transient_local: True
+    qos_overrides:
+      /map:
+        subscription:
+          reliability: best_effort
 
 planner_server:
   ros__parameters:

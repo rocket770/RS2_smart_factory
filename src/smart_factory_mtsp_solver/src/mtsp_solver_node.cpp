@@ -36,7 +36,9 @@ namespace smart_factory_mtsp_solver
     this->declare_parameter<int>("planner_server_timeout_ms", 5000);
     this->declare_parameter<int>("planner_result_timeout_ms", 10000);
 
-    progress_publisher_ = this->create_publisher<std_msgs::msg::String>("mtsp_best_solution", 10);
+    auto progress_qos = rclcpp::QoS(rclcpp::KeepLast(10)).best_effort();
+    progress_publisher_ =
+      this->create_publisher<std_msgs::msg::String>("mtsp_best_solution", progress_qos);
 
     startup_timer_ = this->create_wall_timer(
       std::chrono::milliseconds(500),

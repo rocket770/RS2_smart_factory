@@ -8,6 +8,7 @@ import rclpy
 from rclpy.action import ActionClient
 from rclpy.duration import Duration
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.time import Time
 
 from geometry_msgs.msg import Point, PoseStamped, Quaternion, TransformStamped
@@ -21,6 +22,20 @@ from visualization_msgs.msg import Marker, MarkerArray
 FREE = 0
 UNKNOWN = -1
 OCCUPIED_THRESHOLD = 50
+
+
+def best_effort_qos(depth: int = 10, transient_local: bool = False) -> QoSProfile:
+    durability = (
+        DurabilityPolicy.TRANSIENT_LOCAL
+        if transient_local
+        else DurabilityPolicy.VOLATILE
+    )
+    return QoSProfile(
+        reliability=ReliabilityPolicy.BEST_EFFORT,
+        durability=durability,
+        history=HistoryPolicy.KEEP_LAST,
+        depth=depth,
+    )
 
 
 @dataclass
@@ -87,10 +102,33 @@ class RobotTfStore:
         self.fallback_base_frame = fallback_base_frame
         self.transforms: Dict[Tuple[str, str], TransformStamped] = {}
         self.last_update_time: Optional[Time] = None
-        self.tf_sub = node.create_subscription(TFMessage, '/tf', self._tf_callback, 100)
-        self.tf_static_sub = node.create_subscription(TFMessage, '/tf_static', self._tf_callback, 100)
-        self.namespaced_tf_sub = node.create_subscription(TFMessage, f'/{namespace}/tf', self._tf_callback, 50)
-        self.namespaced_tf_static_sub = node.create_subscription(TFMessage, f'/{namespace}/tf_static', self._tf_callback, 50)
+        tf_qos = best_effort_qos(depth=100)
+        tf_static_qos = best_effort_qos(depth=1, transient_local=True)
+        namespaced_tf_qos = best_effort_qos(depth=50)
+        self.tf_sub = node.create_subscription(
+            TFMessage,
+            '/tf',
+            self._tf_callback,
+            tf_qos,
+        )
+        self.tf_static_sub = node.create_subscription(
+            TFMessage,
+            '/tf_static',
+            self._tf_callback,
+            tf_static_qos,
+        )
+        self.namespaced_tf_sub = node.create_subscription(
+            TFMessage,
+            f'/{namespace}/tf',
+            self._tf_callback,
+            namespaced_tf_qos,
+        )
+        self.namespaced_tf_static_sub = node.create_subscription(
+            TFMessage,
+            f'/{namespace}/tf_static',
+            self._tf_callback,
+            tf_static_qos,
+        )
 
     def _tf_callback(self, msg: TFMessage) -> None:
         now = self._node.get_clock().now()
@@ -258,8 +296,20 @@ class MultiRobotExplorer(Node):
         self.latest_frontiers: List[Frontier] = []
         self.latest_available_frontiers: List[Frontier] = []
 
-        self.map_sub = self.create_subscription(OccupancyGrid, self.map_topic, self._map_callback, 10)
-        self.marker_pub = self.create_publisher(MarkerArray, self.marker_topic, 10) if self.enable_rviz_markers else None
+        self.map_sub = self.create_subscription(
+            OccupancyGrid,
+            self.map_topic,
+            self._map_callback,
+            best_effort_qos(depth=1, transient_local=True),
+        )
+        self.marker_pub = (
+            self.create_publisher(
+                MarkerArray,
+                self.marker_topic,
+                best_effort_qos(depth=10),
+            )
+            if self.enable_rviz_markers else None
+        )
 
         self.start_srv = self.create_service(Trigger, '~/start', self._handle_start)
         self.pause_srv = self.create_service(Trigger, '~/pause', self._handle_pause)

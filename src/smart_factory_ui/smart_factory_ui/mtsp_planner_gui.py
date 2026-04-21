@@ -685,7 +685,6 @@ from action_msgs.msg import GoalStatus
 from rclpy.action import ActionClient
 from rclpy.node import Node
 from rclpy.qos import (
-    qos_profile_sensor_data,
     QoSProfile,
     ReliabilityPolicy,
     DurabilityPolicy,
@@ -765,16 +764,34 @@ class MtspPlannerGuiNode(Node):
         self.explorer_status_client = self.create_client(Trigger, "/multi_robot_explorer/status")
 
         map_qos = QoSProfile(
-            reliability=ReliabilityPolicy.RELIABLE,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+        )
+        progress_qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.VOLATILE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10,
+        )
+        tf_qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.VOLATILE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=100,
+        )
+        tf_static_qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
             history=HistoryPolicy.KEEP_LAST,
             depth=1,
         )
 
         self.create_subscription(OccupancyGrid, "/map", self._on_map, map_qos)
-        self.create_subscription(String, "mtsp_best_solution", self._on_result, 10)
-        self.create_subscription(TFMessage, "/tf", self._on_tf, qos_profile_sensor_data)
-        self.create_subscription(TFMessage, "/tf_static", self._on_tf, qos_profile_sensor_data)
+        self.create_subscription(String, "mtsp_best_solution", self._on_result, progress_qos)
+        self.create_subscription(TFMessage, "/tf", self._on_tf, tf_qos)
+        self.create_subscription(TFMessage, "/tf_static", self._on_tf, tf_static_qos)
 
         self.tf_ns_subs = []
         for ns in self.robot_namespaces:
@@ -783,7 +800,7 @@ class MtspPlannerGuiNode(Node):
                     TFMessage,
                     f"/{ns}/tf",
                     self._on_tf,
-                    qos_profile_sensor_data,
+                    tf_qos,
                 )
             )
             self.tf_ns_subs.append(
@@ -791,7 +808,7 @@ class MtspPlannerGuiNode(Node):
                     TFMessage,
                     f"/{ns}/tf_static",
                     self._on_tf,
-                    qos_profile_sensor_data,
+                    tf_static_qos,
                 )
             )
 

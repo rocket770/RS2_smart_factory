@@ -210,7 +210,7 @@ class MergeMapNode(Node):
         self.topic_pattern = re.compile(self.map_topic_regex)
 
         self.map_qos = QoSProfile(
-            reliability=ReliabilityPolicy.RELIABLE,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
             history=HistoryPolicy.KEEP_LAST,
             depth=1,

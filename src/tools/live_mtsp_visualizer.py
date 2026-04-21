@@ -4,17 +4,24 @@ import math
 import matplotlib.pyplot as plt
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
 
 # this util was written by chatgpt to help me debug and visualize mtsp - nick
 class MtspLiveVisualizer(Node):
     def __init__(self):
         super().__init__("mtsp_live_visualizer")
+        progress_qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.VOLATILE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10,
+        )
         self.subscription = self.create_subscription(
             String,
             "mtsp_best_solution",
             self.on_message,
-            10,
+            progress_qos,
         )
 
         self.latest = None
