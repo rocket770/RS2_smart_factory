@@ -107,6 +107,8 @@ def generate_launch_description():
             robot_name=name,
         )
 
+        
+
         robot_description = ParameterValue(
             Command([
                 'xacro ',

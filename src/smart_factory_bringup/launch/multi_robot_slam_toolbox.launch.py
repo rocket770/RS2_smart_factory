@@ -18,7 +18,7 @@ def generate_launch_description():
 
     ld.add_action(DeclareLaunchArgument(
         'use_sim_time',
-        default_value='true',
+        default_value='false',
         description='Use simulator time'
     ))
 
@@ -63,10 +63,6 @@ def generate_launch_description():
                     'scan_topic': f'/{namespace}/scan',
                     'transform_timeout': 0.5,
                     'tf_buffer_duration': 30.0,
-                    'map_update_interval': 0.2,
-                    'throttle_scans': 1,
-                    'minimum_travel_distance': 0.0,
-                    'minimum_travel_heading': 0.0
                 }
             ],
             remappings=[

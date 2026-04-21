@@ -1,10 +1,18 @@
 slam_toolbox:
   ros__parameters:
-    map_update_interval: 0.2
-    minimum_time_interval: 0.0
+    # LDS-01 settings for real TurtleBot3 Waffle Pi mapping.
+    # Keep scan updates responsive, but ignore the noisiest near/far returns.
+    map_update_interval: 0.5
+    minimum_time_interval: 0.05
+
+    throttle_scans: 1
+    minimum_travel_distance: 0.02
+    minimum_travel_heading: 0.02
 
     min_pass_through: 1
     occupancy_threshold: 0.35
 
-    scan_buffer_size: 3
+    scan_buffer_size: 10
     scan_buffer_maximum_scan_distance: 3.0
+    min_laser_range: 0.16
+    max_laser_range: 3.2

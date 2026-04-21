@@ -26,7 +26,7 @@ def generate_launch_description():
 
     ld.add_action(DeclareLaunchArgument(
         'use_sim_time',
-        default_value='true',
+        default_value='false',
         description='Use simulator time'
     ))
 
@@ -91,6 +91,9 @@ def generate_launch_description():
                 'merge_map_launch.py'
             )
         ),
+        launch_arguments={
+            'use_sim_time': use_sim_time,
+        }.items(),
         condition=IfCondition(use_slam)
     ))
 
@@ -160,19 +163,19 @@ def generate_launch_description():
             }.items(),
         ))
 
-        ld.add_action(Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            name=f'{namespace}_map_to_local_map',
-            arguments=[
-                '0', '0', '0',
-                '0', '0', '0',
-                'map',
-                f'{namespace}/map',
-            ],
-            output='screen',
-            condition=IfCondition(use_slam)
-        ))
+        # ld.add_action(Node(
+        #     package='tf2_ros',
+        #     executable='static_transform_publisher',
+        #     name=f'{namespace}_map_to_local_map',
+        #     arguments=[
+        #         '0', '0', '0',
+        #         '0', '0', '0',
+        #         'map',
+        #         f'{namespace}/map',
+        #     ],
+        #     output='screen',
+        #     condition=IfCondition(use_slam)
+        # ))
 
         ld.add_action(IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
