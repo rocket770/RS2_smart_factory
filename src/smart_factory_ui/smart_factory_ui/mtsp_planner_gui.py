@@ -760,6 +760,8 @@ class MtspPlannerGuiNode(Node):
         self.robot_namespaces = ["tb1", "tb2", "tb3", "tb4"]
         self.save_map_client = self.create_client(SaveMap, "/map_saver/save_map")
         self.explorer_start_client = self.create_client(Trigger, "/multi_robot_explorer/start")
+        self.explorer_return_home_client = self.create_client(Trigger, "/multi_robot_explorer/return_home")
+        self.explorer_status_client = self.create_client(Trigger, "/multi_robot_explorer/status")
 
         map_qos = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
@@ -1439,9 +1441,36 @@ class MainWindow(QMainWindow):
             resp = future.result()
             self.log(f"Save map response: result={resp.result}")
             self.nav_status_label.setText(f"Requested map save to {map_url}")
+            if getattr(resp, "result", False):
+                self._request_explorer_return_home()
         except Exception as exc:
             QMessageBox.critical(self, "Save Map", f"Failed to save map: {exc}")
             self.log(f"Failed to save map: {exc}")
+
+    def _request_explorer_return_home(self):
+        if not self.ros_node.explorer_return_home_client.wait_for_service(timeout_sec=2.0):
+            self.log("Map saved, but /multi_robot_explorer/return_home is not available.")
+            self.nav_status_label.setText("Map saved. Explorer return-home unavailable.")
+            return
+
+        future = self.ros_node.explorer_return_home_client.call_async(Trigger.Request())
+        deadline = time.time() + 10.0
+        while not future.done() and time.time() < deadline:
+            rclpy.spin_once(self.ros_node, timeout_sec=0.1)
+            QApplication.processEvents()
+
+        if not future.done():
+            self.log("Timed out waiting for explorer return-home response.")
+            self.nav_status_label.setText("Map saved, but return-home timed out.")
+            return
+
+        try:
+            resp = future.result()
+            self.log(f"Explorer return-home response: success={resp.success}; {resp.message}")
+            self.nav_status_label.setText("Map saved. Explorer return-home requested.")
+        except Exception as exc:
+            self.log(f"Failed to request explorer return-home: {exc}")
+            self.nav_status_label.setText("Map saved, but return-home request failed.")
 
     def _nav_launch_command(self) -> List[str]:
         mode_text = self.nav_mode_combo.currentText()
@@ -1561,10 +1590,52 @@ class MainWindow(QMainWindow):
             self._explorer_next_attempt = now + 1.0
             return
 
+        if not self._explorer_has_robot_poses_for_home_capture():
+            self.nav_status_label.setText("Explorer ready. Waiting for robot poses before start...")
+            self._explorer_next_attempt = now + 1.0
+            return
+
         self.log("Explorer service is ready. Sending start request.")
         self.nav_status_label.setText("Explorer service ready. Starting exploration...")
         self._explorer_start_future = self.ros_node.explorer_start_client.call_async(Trigger.Request())
         self._explorer_next_attempt = now + 1.0
+
+    def _explorer_has_robot_poses_for_home_capture(self) -> bool:
+        expected_namespaces = sorted(
+            ns for ns in self.ros_node.robot_positions.keys()
+            if ns in self.ros_node.robot_namespaces
+        )
+        if not expected_namespaces:
+            return False
+
+        if not self.ros_node.explorer_status_client.service_is_ready():
+            return False
+
+        future = self.ros_node.explorer_status_client.call_async(Trigger.Request())
+        deadline = time.time() + 1.0
+        while not future.done() and time.time() < deadline:
+            rclpy.spin_once(self.ros_node, timeout_sec=0.05)
+            QApplication.processEvents()
+
+        if not future.done():
+            return False
+
+        try:
+            message = future.result().message
+        except Exception as exc:
+            self.log(f"Failed to read explorer status before start: {exc}")
+            return False
+
+        for ns in expected_namespaces:
+            marker = f"{ns}:"
+            start = message.find(marker)
+            if start < 0:
+                return False
+            end = message.find(" | ", start)
+            part = message[start:] if end < 0 else message[start:end]
+            if "pose=None" in part:
+                return False
+        return True
 
     def on_stop_nav_clicked(self):
         self._clear_pending_explorer_start()
