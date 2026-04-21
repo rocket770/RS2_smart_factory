@@ -7,6 +7,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('map_topic', default_value='/map'),
+        DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument('robot_namespace_regex', default_value='^tb[0-9]+$'),
         DeclareLaunchArgument('base_frame', default_value='base_link'),
         DeclareLaunchArgument('fallback_base_frame', default_value='base_footprint'),
@@ -31,6 +32,7 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'map_topic': LaunchConfiguration('map_topic'),
+                'use_sim_time': LaunchConfiguration('use_sim_time'),
                 'robot_namespace_regex': LaunchConfiguration('robot_namespace_regex'),
                 'base_frame': LaunchConfiguration('base_frame'),
                 'fallback_base_frame': LaunchConfiguration('fallback_base_frame'),

@@ -176,11 +176,22 @@ def merge_all_maps(
 
 
 class MergeMapNode(Node):
+    @staticmethod
+    def reliability_policy(value: str, default: ReliabilityPolicy) -> ReliabilityPolicy:
+        normalized = str(value).strip().lower()
+        if normalized in ("best_effort", "besteffort", "best-effort"):
+            return ReliabilityPolicy.BEST_EFFORT
+        if normalized == "reliable":
+            return ReliabilityPolicy.RELIABLE
+        return default
+
     def __init__(self):
         super().__init__("merge_map")
 
         self.declare_parameter("map_topic_regex", r"^/tb\d+/map$")
         self.declare_parameter("publish_topic", "/merge_map")
+        self.declare_parameter("input_reliability", "best_effort")
+        self.declare_parameter("output_reliability", "reliable")
         self.declare_parameter("scan_period_sec", 2.0)
         self.declare_parameter("merged_frame_id", "merge_map")
         self.declare_parameter("unknown_value", -1)
@@ -195,6 +206,14 @@ class MergeMapNode(Node):
 
         self.map_topic_regex = self.get_parameter("map_topic_regex").value
         self.publish_topic = self.get_parameter("publish_topic").value
+        self.input_reliability = self.reliability_policy(
+            self.get_parameter("input_reliability").value,
+            ReliabilityPolicy.BEST_EFFORT,
+        )
+        self.output_reliability = self.reliability_policy(
+            self.get_parameter("output_reliability").value,
+            ReliabilityPolicy.RELIABLE,
+        )
         self.scan_period_sec = float(self.get_parameter("scan_period_sec").value)
         self.merged_frame_id = self.get_parameter("merged_frame_id").value
         self.unknown_value = int(self.get_parameter("unknown_value").value)
@@ -209,8 +228,14 @@ class MergeMapNode(Node):
 
         self.topic_pattern = re.compile(self.map_topic_regex)
 
-        self.map_qos = QoSProfile(
-            reliability=ReliabilityPolicy.BEST_EFFORT,
+        self.input_map_qos = QoSProfile(
+            reliability=self.input_reliability,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+        )
+        self.output_map_qos = QoSProfile(
+            reliability=self.output_reliability,
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
             history=HistoryPolicy.KEEP_LAST,
             depth=1,
@@ -219,7 +244,7 @@ class MergeMapNode(Node):
         self.publisher = self.create_publisher(
             OccupancyGrid,
             self.publish_topic,
-            self.map_qos,
+            self.output_map_qos,
         )
 
         self.subscriptions_by_topic: Dict[str, object] = {}
@@ -236,7 +261,10 @@ class MergeMapNode(Node):
         self.get_logger().info(
             f"merge_map started. Watching topics matching: {self.map_topic_regex}"
         )
-        self.get_logger().info(f"Publishing merged map on: {self.publish_topic}")
+        self.get_logger().info(
+            f"Publishing merged map on: {self.publish_topic} "
+            f"with {self.output_reliability.name.lower()} reliability"
+        )
 
     def get_topic_offset(self, topic_name: str) -> Tuple[float, float, float]:
         param_name = f"map_offsets.{topic_name}"
@@ -272,7 +300,7 @@ class MergeMapNode(Node):
                 OccupancyGrid,
                 topic_name,
                 lambda msg, t=topic_name: self.map_callback(msg, t),
-                self.map_qos,
+                self.input_map_qos,
             )
             self.subscriptions_by_topic[topic_name] = subscription
 

@@ -10,6 +10,7 @@ from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch.substitutions import PythonExpression
 
 
 def generate_launch_description():
@@ -107,6 +108,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             'map_topic': '/map',
+            'use_sim_time': use_sim_time,
         }.items(),
         condition=IfCondition(use_slam)
     ))
@@ -122,10 +124,10 @@ def generate_launch_description():
             'frame_id': 'map',
             'qos_overrides': {
                 '/map': {
-                    'publisher': {'reliability': 'best_effort'},
+                    'publisher': {'reliability': 'reliable'},
                 },
                 '/map_metadata': {
-                    'publisher': {'reliability': 'best_effort'},
+                    'publisher': {'reliability': 'reliable'},
                 },
             },
         }],
@@ -171,19 +173,24 @@ def generate_launch_description():
             }.items(),
         ))
 
-        # ld.add_action(Node(
-        #     package='tf2_ros',
-        #     executable='static_transform_publisher',
-        #     name=f'{namespace}_map_to_local_map',
-        #     arguments=[
-        #         '0', '0', '0',
-        #         '0', '0', '0',
-        #         'map',
-        #         f'{namespace}/map',
-        #     ],
-        #     output='screen',
-        #     condition=IfCondition(use_slam)
-        # ))
+        ld.add_action(Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name=f'{namespace}_map_to_local_map',
+            arguments=[
+                '0', '0', '0',
+                '0', '0', '0',
+                'map',
+                f'{namespace}/map',
+            ],
+            output='screen',
+            condition=IfCondition(
+                PythonExpression([
+                    "'", use_slam, "'.lower() == 'true' and '",
+                    use_sim_time, "'.lower() == 'true'"
+                ])           
+            )
+        ))
 
         ld.add_action(IncludeLaunchDescription(
             PythonLaunchDescriptionSource(

@@ -1,8 +1,10 @@
 merge_map:
   ros__parameters:
-    use_sim_time: true
+    use_sim_time: false
     map_topic_regex: "^/tb\\d+/map$"
     publish_topic: "/map"
+    input_reliability: "best_effort"
+    output_reliability: "reliable"
     scan_period_sec: 1.0
     merged_frame_id: "map"
     unknown_value: -1
