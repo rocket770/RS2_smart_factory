@@ -907,14 +907,15 @@ class MapCanvas(QLabel):
         img[data == 0] = 255
         img[data > 50] = 0
 
-        img = np.flipud(img)
+        img = np.rot90(np.flipud(img), 1)
         img = np.ascontiguousarray(img)
+        display_height, display_width = img.shape
 
         self._base_qimage = QImage(
             img.data,
-            width,
-            height,
-            width,
+            display_width,
+            display_height,
+            display_width,
             QImage.Format_Grayscale8,
         ).copy()
         self.redraw()
@@ -1052,9 +1053,10 @@ class MapCanvas(QLabel):
 
         width = map_msg.info.width
         height = map_msg.info.height
-        pixel_x = rel_x * width
-        pixel_y_flipped = rel_y * height
-        pixel_y = height - pixel_y_flipped
+        rotated_x = rel_x * height
+        rotated_y = rel_y * width
+        pixel_x = width - rotated_y
+        pixel_y = height - rotated_x
 
         origin_x = map_msg.info.origin.position.x
         origin_y = map_msg.info.origin.position.y
@@ -1080,10 +1082,12 @@ class MapCanvas(QLabel):
 
         pixel_x = (world_x - origin_x) / resolution
         pixel_y = (world_y - origin_y) / resolution
-        pixel_y_flipped = height - pixel_y
 
-        rel_x = pixel_x / width
-        rel_y = pixel_y_flipped / height
+        rotated_x = height - pixel_y
+        rotated_y = width - pixel_x
+
+        rel_x = rotated_x / height
+        rel_y = rotated_y / width
 
         px = target.x() + rel_x * target.width()
         py = target.y() + rel_y * target.height()
