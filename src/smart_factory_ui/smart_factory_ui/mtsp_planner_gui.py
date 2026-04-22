@@ -1612,8 +1612,6 @@ class MainWindow(QMainWindow):
 
             self.nav_process = subprocess.Popen(
                 cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
                 preexec_fn=os.setsid,
             )
             self.nav_status_label.setText("Started: " + " ".join(cmd))
