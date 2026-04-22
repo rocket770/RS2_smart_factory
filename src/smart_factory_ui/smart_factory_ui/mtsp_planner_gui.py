@@ -675,6 +675,7 @@ import signal
 import subprocess
 import tempfile
 import time
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
@@ -690,6 +691,8 @@ from rclpy.qos import (
     DurabilityPolicy,
     HistoryPolicy,
 )
+from rclpy.time import Time
+from tf2_ros import Buffer, TransformException
 
 from std_msgs.msg import String
 from nav2_msgs.action import NavigateToPose
@@ -753,8 +756,10 @@ class MtspPlannerGuiNode(Node):
         super().__init__("mtsp_planner_gui")
 
         self.latest_map: Optional[OccupancyGrid] = None
+        self.latest_map_revision = 0
         self.latest_result: Optional[MtspResult] = None
         self.robot_positions: Dict[str, Tuple[float, float]] = {}
+        self.tf_buffer = Buffer()
 
         self.robot_namespaces = ["tb1", "tb2", "tb3", "tb4"]
         self.save_map_client = self.create_client(SaveMap, "/map_saver/save_map")
@@ -764,7 +769,7 @@ class MtspPlannerGuiNode(Node):
         self.explorer_status_client = self.create_client(Trigger, "/multi_robot_explorer/status")
 
         map_qos = QoSProfile(
-            reliability=ReliabilityPolicy.BEST_EFFORT,
+            reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
             history=HistoryPolicy.KEEP_LAST,
             depth=1,
@@ -776,7 +781,7 @@ class MtspPlannerGuiNode(Node):
             depth=10,
         )
         tf_qos = QoSProfile(
-            reliability=ReliabilityPolicy.BEST_EFFORT,
+            reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.VOLATILE,
             history=HistoryPolicy.KEEP_LAST,
             depth=100,
@@ -790,8 +795,8 @@ class MtspPlannerGuiNode(Node):
 
         self.create_subscription(OccupancyGrid, "/map", self._on_map, map_qos)
         self.create_subscription(String, "mtsp_best_solution", self._on_result, progress_qos)
-        self.create_subscription(TFMessage, "/tf", self._on_tf, tf_qos)
-        self.create_subscription(TFMessage, "/tf_static", self._on_tf, tf_static_qos)
+        self.create_subscription(TFMessage, "/tf", lambda msg: self._on_tf(msg, False), tf_qos)
+        self.create_subscription(TFMessage, "/tf_static", lambda msg: self._on_tf(msg, True), tf_static_qos)
 
         self.tf_ns_subs = []
         for ns in self.robot_namespaces:
@@ -799,7 +804,7 @@ class MtspPlannerGuiNode(Node):
                 self.create_subscription(
                     TFMessage,
                     f"/{ns}/tf",
-                    self._on_tf,
+                    lambda msg, source_ns=ns: self._on_tf(msg, False, source_ns),
                     tf_qos,
                 )
             )
@@ -807,13 +812,14 @@ class MtspPlannerGuiNode(Node):
                 self.create_subscription(
                     TFMessage,
                     f"/{ns}/tf_static",
-                    self._on_tf,
+                    lambda msg, source_ns=ns: self._on_tf(msg, True, source_ns),
                     tf_static_qos,
                 )
             )
 
     def _on_map(self, msg: OccupancyGrid):
         self.latest_map = msg
+        self.latest_map_revision += 1
         self.get_logger().info(
             f"Received map: width={msg.info.width}, "
             f"height={msg.info.height}, "
@@ -833,29 +839,68 @@ class MtspPlannerGuiNode(Node):
         except Exception as exc:
             self.get_logger().error(f"Failed to parse MTSP result: {exc}")
 
-    def _on_tf(self, msg: TFMessage):
+    def _on_tf(self, msg: TFMessage, is_static: bool, source_namespace: Optional[str] = None):
         for t in msg.transforms:
-            robot_name = self._robot_name_from_transform(t)
-            if robot_name is None:
+            transform = self._normalize_transform_for_buffer(t, source_namespace)
+            try:
+                if is_static:
+                    self.tf_buffer.set_transform_static(transform, "mtsp_planner_gui")
+                else:
+                    self.tf_buffer.set_transform(transform, "mtsp_planner_gui")
+            except Exception as exc:
+                self.get_logger().warn(f"Failed to buffer TF transform: {exc}")
+        self._refresh_robot_positions_from_tf()
+
+    def _normalize_transform_for_buffer(
+        self,
+        transform: TransformStamped,
+        source_namespace: Optional[str],
+    ) -> TransformStamped:
+        frame = transform.header.frame_id.lstrip("/")
+        child = transform.child_frame_id.lstrip("/")
+        if source_namespace is None:
+            normalized_frame = frame
+            normalized_child = child
+        else:
+            normalized_frame = self._normalize_tf_frame(frame, source_namespace)
+            normalized_child = self._normalize_tf_frame(child, source_namespace)
+
+        if normalized_frame == transform.header.frame_id and normalized_child == transform.child_frame_id:
+            return transform
+
+        normalized = deepcopy(transform)
+        normalized.header.frame_id = normalized_frame
+        normalized.child_frame_id = normalized_child
+        return normalized
+
+    def _normalize_tf_frame(self, frame: str, source_namespace: str) -> str:
+        frame = frame.lstrip("/")
+        if not frame or "/" in frame or frame in ("map", "world", "earth"):
+            return frame
+        return f"{source_namespace}/{frame}"
+
+    def _map_frame(self) -> str:
+        if self.latest_map is not None and self.latest_map.header.frame_id:
+            return self.latest_map.header.frame_id.lstrip("/")
+        return "map"
+
+    def _refresh_robot_positions_from_tf(self):
+        target_frame = self._map_frame()
+        for ns in self.robot_namespaces:
+            transform = self._lookup_robot_pose_transform(target_frame, ns)
+            if transform is None:
                 continue
-            self.robot_positions[robot_name] = (
-                float(t.transform.translation.x),
-                float(t.transform.translation.y),
+            self.robot_positions[ns] = (
+                float(transform.transform.translation.x),
+                float(transform.transform.translation.y),
             )
 
-    def _robot_name_from_transform(self, t: TransformStamped) -> Optional[str]:
-        child = t.child_frame_id.lstrip("/")
-        frame = t.header.frame_id.lstrip("/")
-
-        for ns in self.robot_namespaces:
-            if child.startswith(f"{ns}/") and child.endswith(("base_link", "base_footprint")):
-                return ns
-            if frame.startswith(f"{ns}/") and child.endswith(("base_link", "base_footprint")):
-                return ns
-
-        if child in ("base_link", "base_footprint"):
-            return None
-
+    def _lookup_robot_pose_transform(self, target_frame: str, namespace: str) -> Optional[TransformStamped]:
+        for source_frame in (f"{namespace}/base_footprint", f"{namespace}/base_link"):
+            try:
+                return self.tf_buffer.lookup_transform(target_frame, source_frame, Time())
+            except TransformException:
+                continue
         return None
 
 
@@ -896,6 +941,7 @@ class MapCanvas(QLabel):
         self._scaled_pixmap: Optional[QPixmap] = None
         self._drawn_pixmap: Optional[QPixmap] = None
         self._last_target_rect: Optional[QRectF] = None
+        self._rendered_map_revision = -1
 
     def set_display_mode(self, mode: str):
         self.display_mode = mode
@@ -914,6 +960,11 @@ class MapCanvas(QLabel):
     def refresh_map(self):
         map_msg = self.ros_node.latest_map
         if map_msg is None:
+            return
+        if (
+            self._base_qimage is not None
+            and self._rendered_map_revision == self.ros_node.latest_map_revision
+        ):
             return
 
         width = map_msg.info.width
@@ -936,6 +987,7 @@ class MapCanvas(QLabel):
             display_width,
             QImage.Format_Grayscale8,
         ).copy()
+        self._rendered_map_revision = self.ros_node.latest_map_revision
         self.redraw()
 
     def clear_map(self, message: str = "Waiting for merged /map..."):
@@ -943,6 +995,7 @@ class MapCanvas(QLabel):
         self._scaled_pixmap = None
         self._drawn_pixmap = None
         self._last_target_rect = None
+        self._rendered_map_revision = -1
         self.clear()
         self.setText(message)
 
@@ -1374,7 +1427,7 @@ class MainWindow(QMainWindow):
         return group
 
     def _on_timer(self):
-        rclpy.spin_once(self.ros_node, timeout_sec=0.0)
+        self._spin_ros_callbacks()
         self._retry_pending_explorer_start()
         self.map_canvas.refresh_map()
         self.map_canvas.redraw()
@@ -1382,6 +1435,13 @@ class MainWindow(QMainWindow):
         self._refresh_result_summary()
         self._refresh_solver_process_state()
         self._refresh_nav_process_state()
+
+    def _spin_ros_callbacks(self):
+        deadline = time.monotonic() + 0.02
+        callbacks_processed = 0
+        while callbacks_processed < 50 and time.monotonic() < deadline:
+            rclpy.spin_once(self.ros_node, timeout_sec=0.0)
+            callbacks_processed += 1
 
     def _refresh_lists(self):
         self.goal_list.clear()
@@ -1517,6 +1577,7 @@ class MainWindow(QMainWindow):
             "launch",
             "smart_factory_bringup",
             "multi_robot_nav2_bringup.launch.py",
+            "use_sim_time:=false"
         ]
         if mode_text == "Load Existing Map (AMCL)":
             map_path = self.map_path_input.text().strip()
