@@ -13,11 +13,25 @@
 
 namespace smart_factory_mtsp_solver
 {
+namespace
+{
+
+  void append_json_number(std::ostringstream & ss, double value)
+  {
+    if (std::isfinite(value)) {
+      ss << value;
+    } else {
+      ss << "null";
+    }
+  }
+
+}  // namespace
 
   MtspSolverNode::MtspSolverNode()
   : Node("mtsp_solver_node"), started_(false)
   {
     this->declare_parameter<std::vector<double> >("robot_starts", std::vector<double>());
+    this->declare_parameter<std::vector<std::string> >("robot_namespaces", std::vector<std::string>());
     this->declare_parameter<std::vector<double> >("goals", std::vector<double>());
     this->declare_parameter<int>("population_size", 100);
     this->declare_parameter<int>("generations", 200);
@@ -36,7 +50,7 @@ namespace smart_factory_mtsp_solver
     this->declare_parameter<int>("planner_server_timeout_ms", 5000);
     this->declare_parameter<int>("planner_result_timeout_ms", 10000);
 
-    auto progress_qos = rclcpp::QoS(rclcpp::KeepLast(10)).best_effort();
+    auto progress_qos = rclcpp::QoS(rclcpp::KeepLast(10)).reliable();
     progress_publisher_ =
       this->create_publisher<std_msgs::msg::String>("mtsp_best_solution", progress_qos);
 
@@ -45,7 +59,19 @@ namespace smart_factory_mtsp_solver
       [this]() {
         startup_timer_->cancel();
         solver_thread_ = std::thread([this]() {
-          this->start_solver();
+          try {
+            this->start_solver();
+          } catch (const std::exception & e) {
+            RCLCPP_ERROR(this->get_logger(), "MTSP solver failed: %s", e.what());
+            if (rclcpp::ok()) {
+              rclcpp::shutdown();
+            }
+          } catch (...) {
+            RCLCPP_ERROR(this->get_logger(), "MTSP solver failed with an unknown exception");
+            if (rclcpp::ok()) {
+              rclcpp::shutdown();
+            }
+          }
         });
       });
   }
@@ -156,6 +182,14 @@ namespace smart_factory_mtsp_solver
 
     const Solution solution = ga.solve(problem, params, callback, path_cost_provider.get());
 
+    if (publish_progress) {
+      ProgressState final_progress;
+      final_progress.generation = params.generations;
+      final_progress.total_cost = solution.total_cost;
+      final_progress.routes = solution.routes;
+      publish_progress_message(final_progress, problem);
+    }
+
     log_solution(solution, problem);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -204,7 +238,20 @@ namespace smart_factory_mtsp_solver
 
     ss << "{";
     ss << "\"generation\":" << progress.generation << ",";
-    ss << "\"cost\":" << progress.total_cost << ",";
+    ss << "\"cost\":";
+    append_json_number(ss, progress.total_cost);
+    ss << ",";
+
+    const std::vector<std::string> robot_namespaces =
+      this->get_parameter("robot_namespaces").as_string_array();
+    ss << "\"robot_namespaces\":[";
+    for (std::size_t i = 0; i < robot_namespaces.size(); ++i) {
+      ss << "\"" << robot_namespaces[i] << "\"";
+      if (i + 1 < robot_namespaces.size()) {
+        ss << ",";
+      }
+    }
+    ss << "],";
 
     ss << "\"robot_starts\":[";
     for (std::size_t i = 0; i < problem.robot_starts.size(); ++i) {

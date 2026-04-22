@@ -670,6 +670,7 @@
 
 #!/usr/bin/env python3
 import json
+import math
 import os
 import signal
 import subprocess
@@ -740,6 +741,7 @@ class WorldPoint:
 
 @dataclass
 class MtspResult:
+    robot_namespaces: List[str]
     robot_starts: List[Tuple[float, float]]
     goals: List[Tuple[float, float]]
     routes: List[List[int]]
@@ -758,7 +760,9 @@ class MtspPlannerGuiNode(Node):
         self.latest_map: Optional[OccupancyGrid] = None
         self.latest_map_revision = 0
         self.latest_result: Optional[MtspResult] = None
+        self._last_ignored_result_reason: Optional[str] = None
         self.robot_positions: Dict[str, Tuple[float, float]] = {}
+        self.robot_position_sources: Dict[str, str] = {}
         self.tf_buffer = Buffer()
 
         self.robot_namespaces = ["tb1", "tb2", "tb3", "tb4"]
@@ -775,7 +779,7 @@ class MtspPlannerGuiNode(Node):
             depth=1,
         )
         progress_qos = QoSProfile(
-            reliability=ReliabilityPolicy.BEST_EFFORT,
+            reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.VOLATILE,
             history=HistoryPolicy.KEEP_LAST,
             depth=10,
@@ -788,6 +792,12 @@ class MtspPlannerGuiNode(Node):
         )
         tf_static_qos = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+        )
+        amcl_pose_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
             history=HistoryPolicy.KEEP_LAST,
             depth=1,
@@ -806,6 +816,14 @@ class MtspPlannerGuiNode(Node):
                     f"/{ns}/tf",
                     lambda msg, source_ns=ns: self._on_tf(msg, False, source_ns),
                     tf_qos,
+                )
+            )
+            self.tf_ns_subs.append(
+                self.create_subscription(
+                    PoseWithCovarianceStamped,
+                    f"/{ns}/amcl_pose",
+                    lambda msg, source_ns=ns: self._on_amcl_pose(source_ns, msg),
+                    amcl_pose_qos,
                 )
             )
             self.tf_ns_subs.append(
@@ -829,15 +847,44 @@ class MtspPlannerGuiNode(Node):
     def _on_result(self, msg: String):
         try:
             data = json.loads(msg.data)
+            cost_value = data.get("cost")
+            if cost_value is None:
+                self._ignore_mtsp_result_once(
+                    "Ignoring MTSP update without a finite cost; waiting for a valid plan."
+                )
+                return
+
+            cost = float(cost_value)
+            if not math.isfinite(cost):
+                self._ignore_mtsp_result_once(
+                    "Ignoring MTSP update with a non-finite cost; waiting for a valid plan."
+                )
+                return
+
             self.latest_result = MtspResult(
+                robot_namespaces=[str(ns) for ns in data.get("robot_namespaces", [])],
                 robot_starts=[tuple(p) for p in data["robot_starts"]],
                 goals=[tuple(p) for p in data["goals"]],
                 routes=[list(r) for r in data["routes"]],
                 generation=int(data["generation"]),
-                cost=float(data["cost"]),
+                cost=cost,
             )
+            self._last_ignored_result_reason = None
         except Exception as exc:
             self.get_logger().error(f"Failed to parse MTSP result: {exc}")
+
+    def _ignore_mtsp_result_once(self, reason: str):
+        if self._last_ignored_result_reason == reason:
+            return
+        self._last_ignored_result_reason = reason
+        self.get_logger().warn(reason)
+
+    def _on_amcl_pose(self, namespace: str, msg: PoseWithCovarianceStamped):
+        self.robot_positions[namespace] = (
+            float(msg.pose.pose.position.x),
+            float(msg.pose.pose.position.y),
+        )
+        self.robot_position_sources[namespace] = "amcl_pose"
 
     def _on_tf(self, msg: TFMessage, is_static: bool, source_namespace: Optional[str] = None):
         for t in msg.transforms:
@@ -894,6 +941,7 @@ class MtspPlannerGuiNode(Node):
                 float(transform.transform.translation.x),
                 float(transform.transform.translation.y),
             )
+            self.robot_position_sources[ns] = "tf"
 
     def _lookup_robot_pose_transform(self, target_frame: str, namespace: str) -> Optional[TransformStamped]:
         for source_frame in (f"{namespace}/base_footprint", f"{namespace}/base_link"):
@@ -1453,11 +1501,12 @@ class MainWindow(QMainWindow):
             live = self.ros_node.robot_positions.get(ns)
             if live is None:
                 continue
+            source = self.ros_node.robot_position_sources.get(ns, "live")
             suffix = ""
             target = self.map_canvas.robot_starts.get(ns)
             if target is not None:
                 suffix = f" -> target ({target.x:.2f}, {target.y:.2f})"
-            self.start_list.addItem(QListWidgetItem(f"{ns}: ({live[0]:.2f}, {live[1]:.2f}) [live]{suffix}"))
+            self.start_list.addItem(QListWidgetItem(f"{ns}: ({live[0]:.2f}, {live[1]:.2f}) [{source}]{suffix}"))
 
     def _refresh_result_summary(self):
         result = self.ros_node.latest_result
@@ -1476,7 +1525,8 @@ class MainWindow(QMainWindow):
             "",
         ]
         for i, route in enumerate(result.routes):
-            lines.append(f"robot {i}: {route}")
+            robot_name = result.robot_namespaces[i] if i < len(result.robot_namespaces) else f"robot {i}"
+            lines.append(f"{robot_name}: {route}")
         self.summary_box.setPlainText("\n".join(lines))
         if self.solver_process is not None:
             self.result_label.setText(
@@ -1888,7 +1938,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "No Goals", "Add at least one goal on the map.")
             return
 
-        effective_robot_starts = self._effective_robot_starts()
+        effective_robot_starts = self._effective_robot_starts(require_nav_server=True)
         if not effective_robot_starts:
             QMessageBox.warning(
                 self,
@@ -1905,10 +1955,17 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Solver Running", "The MTSP solver is already running.")
             return
 
-        config = self.build_run_config()
+        config = self.build_run_config(effective_robot_starts)
         self.summary_box.setPlainText(json.dumps(config, indent=2))
         self.ros_node.latest_result = None
         self._planned_robot_names = [ns for ns, _, _ in effective_robot_starts]
+        self.log(
+            "MTSP robots: "
+            + ", ".join(
+                f"{ns}=({point.x:.2f},{point.y:.2f})/{source}"
+                for ns, point, source in effective_robot_starts
+            )
+        )
 
         try:
             params_path = self._write_solver_params_file(config)
@@ -1948,6 +2005,15 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "No Plan", "Run MTSP and wait for a solution before starting execution.")
             return
 
+        if self.solver_process is not None and self.solver_process.poll() is None:
+            QMessageBox.information(
+                self,
+                "Solver Running",
+                "Wait for the MTSP solver to finish before starting execution.",
+            )
+            self.log("Start ignored because MTSP solver is still updating the plan.")
+            return
+
         if self._execution_active:
             QMessageBox.information(self, "Already Executing", "The MTSP execution is already running.")
             return
@@ -1956,7 +2022,8 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "No Planned Robots", "No robot plan is available. Run MTSP again.")
             return
 
-        if len(result.routes) != len(self._planned_robot_names):
+        result_robot_names = result.robot_namespaces or self._planned_robot_names
+        if len(result.routes) != len(result_robot_names):
             QMessageBox.warning(
                 self,
                 "Plan Mismatch",
@@ -1964,12 +2031,19 @@ class MainWindow(QMainWindow):
             )
             return
 
+        if result.robot_namespaces and result.robot_namespaces != self._planned_robot_names:
+            self.log(
+                "MTSP result robot order differs from the last run request; using result order: "
+                + ", ".join(result.robot_namespaces)
+            )
+
+        self._planned_robot_names = list(result_robot_names)
         self._execution_active = True
         self._execution_paused = False
         self._execution_routes = {
-            ns: list(route) for ns, route in zip(self._planned_robot_names, result.routes)
+            ns: list(route) for ns, route in zip(result_robot_names, result.routes)
         }
-        self._execution_progress = {ns: 0 for ns in self._planned_robot_names}
+        self._execution_progress = {ns: 0 for ns in result_robot_names}
         self._execution_goal_handles = {}
 
         self.log("Start requested.")
@@ -1978,6 +2052,7 @@ class MainWindow(QMainWindow):
         active_robot_count = 0
         for ns in self._planned_robot_names:
             route = self._execution_routes.get(ns, [])
+            self.log(f"{ns}: MTSP route {route}")
             if not route:
                 self.log(f"{ns}: no assigned goals.")
                 self._execution_routes.pop(ns, None)
@@ -1995,8 +2070,9 @@ class MainWindow(QMainWindow):
         self.summary_box.setPlainText(json.dumps(config, indent=2))
         self.log("Dumped current run config to summary pane.")
 
-    def build_run_config(self) -> dict:
-        effective_robot_starts = self._effective_robot_starts()
+    def build_run_config(self, effective_robot_starts: Optional[List[Tuple[str, WorldPoint, str]]] = None) -> dict:
+        if effective_robot_starts is None:
+            effective_robot_starts = self._effective_robot_starts()
         robot_names = [ns for ns, _, _ in effective_robot_starts]
         robot_starts_flat = []
         for _, p, _ in effective_robot_starts:
@@ -2031,12 +2107,17 @@ class MainWindow(QMainWindow):
             }
         }
 
-    def _effective_robot_starts(self) -> List[Tuple[str, WorldPoint, str]]:
+    def _effective_robot_starts(self, require_nav_server: bool = False) -> List[Tuple[str, WorldPoint, str]]:
         starts: List[Tuple[str, WorldPoint, str]] = []
         for ns in self.ros_node.robot_namespaces:
             live = self.ros_node.robot_positions.get(ns)
             if live is not None:
-                starts.append((ns, WorldPoint(float(live[0]), float(live[1])), "live"))
+                if require_nav_server:
+                    client = self._get_nav_client(ns)
+                    if not client.wait_for_server(timeout_sec=0.2):
+                        continue
+                source = self.ros_node.robot_position_sources.get(ns, "live")
+                starts.append((ns, WorldPoint(float(live[0]), float(live[1])), source))
         return starts
 
     def _write_solver_params_file(self, config: dict) -> str:

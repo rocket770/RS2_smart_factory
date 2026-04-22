@@ -15,6 +15,8 @@ int main(int argc, char ** argv)
     fprintf(stderr, "Exception: %s\n", e.what());
   }
 
-  rclcpp::shutdown();
+  if (rclcpp::ok()) {
+    rclcpp::shutdown();
+  }
   return 0;
 }
