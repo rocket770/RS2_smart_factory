@@ -4,7 +4,7 @@ robots:
     y_pose: -1.7
     z_pose: 0.01
   - name: tb2
-    x_pose: 1.7S
+    x_pose: 1.7
     y_pose: 0.0
     z_pose: 0.01
   # - name: tb2
