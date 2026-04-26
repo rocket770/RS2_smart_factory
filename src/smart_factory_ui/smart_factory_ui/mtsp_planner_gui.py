@@ -670,6 +670,7 @@
 
 #!/usr/bin/env python3
 import json
+import math
 import os
 import signal
 import subprocess
@@ -717,6 +718,7 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QSplitter,
     QTextEdit,
@@ -756,8 +758,13 @@ class MtspPlannerGuiNode(Node):
         self.latest_map: Optional[OccupancyGrid] = None
         self.latest_result: Optional[MtspResult] = None
         self.robot_positions: Dict[str, Tuple[float, float]] = {}
+        self.robot_poses: Dict[str, Tuple[float, float, float]] = {}
 
         self.robot_namespaces = ["tb1", "tb2", "tb3", "tb4"]
+        self.initial_pose_publishers = {
+            ns: self.create_publisher(PoseWithCovarianceStamped, f"/{ns}/initialpose", 10)
+            for ns in self.robot_namespaces
+        }
         self.save_map_client = self.create_client(SaveMap, "/map_saver/save_map")
         self.explorer_start_client = self.create_client(Trigger, "/multi_robot_explorer/start")
         self.explorer_stop_client = self.create_client(Trigger, "/multi_robot_explorer/stop")
@@ -825,6 +832,11 @@ class MtspPlannerGuiNode(Node):
                 float(t.transform.translation.x),
                 float(t.transform.translation.y),
             )
+            self.robot_poses[robot_name] = (
+                float(t.transform.translation.x),
+                float(t.transform.translation.y),
+                self._yaw_from_quaternion(t.transform.rotation),
+            )
 
     def _robot_name_from_transform(self, t: TransformStamped) -> Optional[str]:
         child = t.child_frame_id.lstrip("/")
@@ -840,6 +852,11 @@ class MtspPlannerGuiNode(Node):
             return None
 
         return None
+
+    def _yaw_from_quaternion(self, q) -> float:
+        siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
+        cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+        return math.atan2(siny_cosp, cosy_cosp)
 
 
 # -----------------------------
@@ -864,7 +881,7 @@ class MapCanvas(QLabel):
         self.log = log_fn
         self.manual_move_callback = manual_move_callback
 
-        self.setMinimumSize(700, 700)
+        self.setMinimumSize(420, 420)
         self.setAlignment(Qt.AlignCenter)
         self.setStyleSheet("background-color: #222; border: 1px solid #555;")
         self.setText("Waiting for merged /map...")
@@ -1122,11 +1139,12 @@ class MainWindow(QMainWindow):
         self._manual_goal_handles: Dict[str, object] = {}
 
         self.setWindowTitle("MTSP Planner GUI")
-        self.resize(1400, 900)
+        self._apply_initial_window_size()
 
         root = QWidget()
         self.setCentralWidget(root)
         root_layout = QHBoxLayout(root)
+        root_layout.setContentsMargins(8, 8, 8, 8)
 
         splitter = QSplitter(Qt.Horizontal)
         root_layout.addWidget(splitter)
@@ -1138,6 +1156,7 @@ class MainWindow(QMainWindow):
         # Left panel
         left = QWidget()
         left_layout = QVBoxLayout(left)
+        left_layout.setContentsMargins(0, 0, 0, 0)
 
         title = QLabel("Multi-Robot MTSP Planner")
         title.setStyleSheet("font-size: 18px; font-weight: bold;")
@@ -1155,23 +1174,42 @@ class MainWindow(QMainWindow):
         self.log_box.setPlaceholderText("Logs / actions / run status...")
         left_layout.addWidget(self.log_box, stretch=1)
 
+        left_scroll = QScrollArea()
+        left_scroll.setWidgetResizable(True)
+        left_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        left_scroll.setWidget(left)
+
 
         # Right panel
         right = QWidget()
         right_layout = QVBoxLayout(right)
+        right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.addWidget(self.map_canvas, stretch=1)
 
         self.result_label = QLabel("No MTSP result yet.")
         self.result_label.setAlignment(Qt.AlignCenter)
         right_layout.addWidget(self.result_label)
 
-        splitter.addWidget(left)
+        splitter.addWidget(left_scroll)
         splitter.addWidget(right)
-        splitter.setSizes([420, 980])
+        splitter.setSizes([360, 840])
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
 
         self._qt_timer = QTimer(self)
         self._qt_timer.timeout.connect(self._on_timer)
         self._qt_timer.start(100)
+
+    def _apply_initial_window_size(self):
+        app = QApplication.instance()
+        if app is None or app.primaryScreen() is None:
+            self.resize(1100, 700)
+            return
+
+        available = app.primaryScreen().availableGeometry()
+        width = min(1220, max(900, available.width() - 80))
+        height = min(760, max(620, available.height() - 100))
+        self.resize(width, height)
 
     def _build_nav_stack_group(self):
         group = QGroupBox("Map Source / Navigation Mode")
@@ -1200,6 +1238,10 @@ class MainWindow(QMainWindow):
         self.browse_map_btn.clicked.connect(self.on_browse_map_clicked)
         row2.addWidget(self.browse_map_btn)
         layout.addWidget(self.amcl_controls)
+
+        self.set_amcl_from_current_btn = QPushButton("Set AMCL Poses From Current")
+        self.set_amcl_from_current_btn.clicked.connect(self.on_set_amcl_from_current_clicked)
+        layout.addWidget(self.set_amcl_from_current_btn)
 
         row3 = QHBoxLayout()
         self.start_nav_btn = QPushButton("Start Nav Stack")
@@ -1280,12 +1322,12 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(group)
 
         self.goal_list = QListWidget()
-        self.goal_list.setMinimumHeight(130)
+        self.goal_list.setMinimumHeight(90)
         layout.addWidget(QLabel("Goals"))
         layout.addWidget(self.goal_list)
 
         self.start_list = QListWidget()
-        self.start_list.setMinimumHeight(120)
+        self.start_list.setMinimumHeight(90)
         layout.addWidget(QLabel("Robot positions"))
         layout.addWidget(self.start_list)
 
@@ -1352,7 +1394,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(group)
         self.summary_box = QTextEdit()
         self.summary_box.setReadOnly(True)
-        self.summary_box.setMaximumHeight(180)
+        self.summary_box.setMaximumHeight(140)
         layout.addWidget(self.summary_box)
         return group
 
@@ -1410,11 +1452,12 @@ class MainWindow(QMainWindow):
         using_amcl = mode_text == "Load Existing Map (AMCL)"
         using_slam = not using_amcl
         self.amcl_controls.setVisible(using_amcl)
+        self.set_amcl_from_current_btn.setVisible(using_amcl)
         self.slam_controls.setVisible(using_slam)
         if using_amcl:
             self.nav_status_label.setText("AMCL mode selected. Choose a saved map YAML.")
         else:
-            self.nav_status_label.setText("SLAM mode selected. This will start SLAM, merge_map, and explorer.")
+            self.nav_status_label.setText("SLAM mode selected. Explorer will launch paused.")
 
     def on_browse_map_clicked(self):
         filename, _ = QFileDialog.getOpenFileName(
@@ -1425,6 +1468,41 @@ class MainWindow(QMainWindow):
         )
         if filename:
             self.map_path_input.setText(filename)
+
+    def on_set_amcl_from_current_clicked(self):
+        published = []
+        missing = []
+
+        for ns in self.ros_node.robot_namespaces:
+            pose = self.ros_node.robot_poses.get(ns)
+            if pose is None:
+                missing.append(ns)
+                continue
+
+            x, y, yaw = pose
+            msg = PoseWithCovarianceStamped()
+            msg.header.stamp = self.ros_node.get_clock().now().to_msg()
+            msg.header.frame_id = "map"
+            msg.pose.pose.position.x = x
+            msg.pose.pose.position.y = y
+            msg.pose.pose.position.z = 0.0
+            msg.pose.pose.orientation.z = math.sin(yaw / 2.0)
+            msg.pose.pose.orientation.w = math.cos(yaw / 2.0)
+            msg.pose.covariance[0] = 0.25
+            msg.pose.covariance[7] = 0.25
+            msg.pose.covariance[35] = 0.0685
+
+            self.ros_node.initial_pose_publishers[ns].publish(msg)
+            published.append(ns)
+            self.log(f"{ns}: published AMCL initial pose ({x:.2f}, {y:.2f}, yaw={yaw:.2f})")
+
+        if published:
+            self.nav_status_label.setText("Published AMCL pose estimates for: " + ", ".join(published))
+        else:
+            self.nav_status_label.setText("No live robot poses available for AMCL pose estimates.")
+
+        if missing:
+            self.log("No live pose available for: " + ", ".join(missing))
 
     def on_save_map_clicked(self):
         if self.nav_mode_combo.currentText() != "Use SLAM + Explore":
@@ -1528,7 +1606,7 @@ class MainWindow(QMainWindow):
             if self.nav_mode_combo.currentText() == "Use SLAM + Explore":
                 self.ros_node.latest_map = None
                 self.map_canvas.clear_map("Waiting for SLAM to publish a merged /map...")
-                self._schedule_explorer_start()
+                self._clear_pending_explorer_start()
             else:
                 self._clear_pending_explorer_start()
 
@@ -1541,7 +1619,7 @@ class MainWindow(QMainWindow):
             self.nav_status_label.setText("Started: " + " ".join(cmd))
             self.log("Started nav stack: " + " ".join(cmd))
             if self.nav_mode_combo.currentText() == "Use SLAM + Explore":
-                self.nav_status_label.setText("SLAM stack launching. Waiting for explorer service...")
+                self.nav_status_label.setText("SLAM stack launching. Explorer will stay paused until Resume.")
         except Exception as exc:
             QMessageBox.critical(self, "Launch Failed", f"Failed to launch nav stack: {exc}")
             self.log(f"Failed to launch nav stack: {exc}")

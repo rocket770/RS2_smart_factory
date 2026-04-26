@@ -5,7 +5,7 @@ import yaml
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -134,58 +134,67 @@ def generate_launch_description():
         condition=UnlessCondition(use_slam)
     ))
 
-    for robot in robots:
+    for robot_index, robot in enumerate(robots):
         namespace = robot['name']
         initial_pose_x = str(robot.get('initial_pose_x', robot['x_pose']))
         initial_pose_y = str(robot.get('initial_pose_y', robot['y_pose']))
         initial_pose_yaw = str(robot.get('initial_pose_yaw', robot.get('yaw', 0.0)))
+        robot_launch_delay = float(robot_index) * 3.0
 
-        ld.add_action(IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(nav_launch_dir, 'bringup_launch.py')
+        robot_nav_actions = [
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(nav_launch_dir, 'bringup_launch.py')
+                ),
+                launch_arguments={
+                    'use_slam': use_slam,
+                    'namespace': namespace,
+                    'use_namespace': 'True',
+                    'map_server': 'False',
+                    'map': map_file,
+                    'params_file': params_file,
+                    'autostart': 'True',
+                    'use_sim_time': use_sim_time,
+                    'log_level': 'warn',
+                    'initial_pose_x': initial_pose_x,
+                    'initial_pose_y': initial_pose_y,
+                    'initial_pose_yaw': initial_pose_yaw,
+                }.items(),
             ),
-            launch_arguments={
-                'use_slam': use_slam,
-                'namespace': namespace,
-                'use_namespace': 'True',
-                'map_server': 'False',
-                'map': map_file,
-                'params_file': params_file,
-                'autostart': 'True',
-                'use_sim_time': use_sim_time,
-                'log_level': 'warn',
-                'initial_pose_x': initial_pose_x,
-                'initial_pose_y': initial_pose_y,
-                'initial_pose_yaw': initial_pose_yaw,
-            }.items(),
-        ))
 
-        ld.add_action(Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            name=f'{namespace}_map_to_local_map',
-            arguments=[
-                '0', '0', '0',
-                '0', '0', '0',
-                'map',
-                f'{namespace}/map',
-            ],
-            output='screen',
-            condition=IfCondition(use_slam)
-        ))
-
-        ld.add_action(IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(nav_launch_dir, 'rviz_launch.py')
+            Node(
+                package='tf2_ros',
+                executable='static_transform_publisher',
+                name=f'{namespace}_map_to_local_map',
+                arguments=[
+                    '0', '0', '0',
+                    '0', '0', '0',
+                    'map',
+                    f'{namespace}/map',
+                ],
+                output='screen',
+                condition=IfCondition(use_slam)
             ),
-            launch_arguments={
-                'use_sim_time': use_sim_time,
-                'namespace': namespace,
-                'use_namespace': 'True',
-                'rviz_config': rviz_config_file,
-                'log_level': 'warn',
-            }.items(),
-            condition=IfCondition(enable_rviz)
-        ))
+
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(nav_launch_dir, 'rviz_launch.py')
+                ),
+                launch_arguments={
+                    'use_sim_time': use_sim_time,
+                    'namespace': namespace,
+                    'use_namespace': 'True',
+                    'rviz_config': rviz_config_file,
+                    'log_level': 'warn',
+                }.items(),
+                condition=IfCondition(enable_rviz)
+            ),
+        ]
+
+        if robot_launch_delay > 0.0:
+            ld.add_action(TimerAction(period=robot_launch_delay, actions=robot_nav_actions))
+        else:
+            for action in robot_nav_actions:
+                ld.add_action(action)
 
     return ld

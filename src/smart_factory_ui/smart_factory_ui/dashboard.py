@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication
 
 
 class Dashboard(QWidget):
@@ -22,7 +23,8 @@ class Dashboard(QWidget):
         self.pending_futures = []
 
         self.setWindowTitle("Smart Factory Task GUI")
-        self.setMinimumSize(900, 700)
+        self.setMinimumSize(720, 520)
+        self._apply_initial_window_size()
 
         main_layout = QHBoxLayout()
 
@@ -60,7 +62,7 @@ class Dashboard(QWidget):
         right_panel.addWidget(map_title)
 
         self.map_label = QLabel()
-        self.map_label.setMinimumSize(400, 400)
+        self.map_label.setMinimumSize(280, 280)
         self.map_label.setAlignment(Qt.AlignCenter)
         self.map_label.setStyleSheet("background-color: #222; border: 1px solid #555;")
         self.map_label.setText("Waiting for map...")
@@ -74,6 +76,17 @@ class Dashboard(QWidget):
         main_layout.addLayout(right_panel, stretch=1)
 
         self.setLayout(main_layout)
+
+    def _apply_initial_window_size(self):
+        screen = QApplication.primaryScreen()
+        if screen is None:
+            self.resize(980, 620)
+            return
+
+        available = screen.availableGeometry()
+        width = min(1100, max(820, available.width() - 80))
+        height = min(700, max(560, available.height() - 100))
+        self.resize(width, height)
 
     def _build_task_group(self, title, idx):
         group = QGroupBox(title)
