@@ -3,10 +3,12 @@ robots:
     x_pose: 0.0
     y_pose: 0.0
     z_pose: 0.01
+    yaw: 0.0
   - name: tb2
-    x_pose: 2.5
-    y_pose: 0.5
+    x_pose: 0.0
+    y_pose: 2.5
     z_pose: 0.01
+    yaw: 2.637
   # - name: tb2
   #   x_pose: 2.0
   #   y_pose: 1.5

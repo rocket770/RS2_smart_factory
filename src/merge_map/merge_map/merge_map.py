@@ -3,6 +3,7 @@ import re
 from typing import Dict, List, Optional, Tuple
 
 import rclpy
+from rclpy.time import Time
 from rclpy.node import Node
 from rclpy.qos import (
     QoSProfile,
@@ -12,6 +13,7 @@ from rclpy.qos import (
 )
 
 from nav_msgs.msg import OccupancyGrid
+from tf2_ros import Buffer, TransformException, TransformListener
 
 
 def world_to_grid_index(world_coord: float, origin_coord: float, resolution: float) -> int:
@@ -60,6 +62,33 @@ def transform_point(x: float, y: float, dx: float, dy: float, yaw: float) -> Tup
     return tx, ty
 
 
+def yaw_from_quaternion(x: float, y: float, z: float, w: float) -> float:
+    siny_cosp = 2.0 * ((w * z) + (x * y))
+    cosy_cosp = 1.0 - (2.0 * ((y * y) + (z * z)))
+    return math.atan2(siny_cosp, cosy_cosp)
+
+
+def map_origin_yaw(map_msg: OccupancyGrid) -> float:
+    orientation = map_msg.info.origin.orientation
+    return yaw_from_quaternion(
+        float(orientation.x),
+        float(orientation.y),
+        float(orientation.z),
+        float(orientation.w),
+    )
+
+
+def grid_point_to_map_frame(map_msg: OccupancyGrid, x: float, y: float) -> Tuple[float, float]:
+    origin = map_msg.info.origin.position
+    return transform_point(
+        x,
+        y,
+        float(origin.x),
+        float(origin.y),
+        map_origin_yaw(map_msg),
+    )
+
+
 def merge_all_maps(
     maps_with_offsets: List[Tuple[str, OccupancyGrid, Tuple[float, float, float]]],
     merged_frame_id: str = "merge_map",
@@ -85,8 +114,7 @@ def merge_all_maps(
         ]
 
         for cx, cy in corners:
-            local_x = m.info.origin.position.x + cx
-            local_y = m.info.origin.position.y + cy
+            local_x, local_y = grid_point_to_map_frame(m, cx, cy)
             wx, wy = transform_point(local_x, local_y, dx, dy, yaw)
             all_world_points.append((wx, wy))
 
@@ -123,8 +151,11 @@ def merge_all_maps(
 
                 # Merge using cell centers so maps with slightly different origins
                 # align better and a newly-free cell can clear a stale obstacle.
-                local_x = m.info.origin.position.x + ((x + 0.5) * m.info.resolution)
-                local_y = m.info.origin.position.y + ((y + 0.5) * m.info.resolution)
+                local_x, local_y = grid_point_to_map_frame(
+                    m,
+                    (x + 0.5) * m.info.resolution,
+                    (y + 0.5) * m.info.resolution,
+                )
 
                 wx, wy = transform_point(local_x, local_y, dx, dy, yaw)
 
@@ -194,6 +225,7 @@ class MergeMapNode(Node):
         self.declare_parameter("output_reliability", "reliable")
         self.declare_parameter("scan_period_sec", 2.0)
         self.declare_parameter("merged_frame_id", "merge_map")
+        self.declare_parameter("use_tf_transforms", True)
         self.declare_parameter("unknown_value", -1)
         self.declare_parameter("occupied_threshold", 50)
         self.declare_parameter("overwrite_known_cells", False)
@@ -216,6 +248,7 @@ class MergeMapNode(Node):
         )
         self.scan_period_sec = float(self.get_parameter("scan_period_sec").value)
         self.merged_frame_id = self.get_parameter("merged_frame_id").value
+        self.use_tf_transforms = bool(self.get_parameter("use_tf_transforms").value)
         self.unknown_value = int(self.get_parameter("unknown_value").value)
         self.occupied_threshold = int(self.get_parameter("occupied_threshold").value)
         self.overwrite_known_cells = bool(
@@ -246,9 +279,12 @@ class MergeMapNode(Node):
             self.publish_topic,
             self.output_map_qos,
         )
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
 
         self.subscriptions_by_topic: Dict[str, object] = {}
         self.latest_maps: Dict[str, OccupancyGrid] = {}
+        self._tf_fallback_warned_topics = set()
 
         self.get_logger().info("Calling initial scan manually")
         self.scan_for_map_topics()
@@ -277,6 +313,43 @@ class MergeMapNode(Node):
             f"No offset configured for {topic_name}, using [0.0, 0.0, 0.0]"
         )
         return 0.0, 0.0, 0.0
+
+    def get_map_pose(self, topic_name: str, msg: OccupancyGrid) -> Tuple[float, float, float]:
+        if not self.use_tf_transforms:
+            return self.get_topic_offset(topic_name)
+
+        source_frame = msg.header.frame_id.lstrip("/")
+        target_frame = str(self.merged_frame_id).lstrip("/")
+
+        if not source_frame or source_frame == target_frame:
+            return 0.0, 0.0, 0.0
+
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                target_frame,
+                source_frame,
+                Time(),
+            )
+            translation = transform.transform.translation
+            rotation = transform.transform.rotation
+            return (
+                float(translation.x),
+                float(translation.y),
+                yaw_from_quaternion(
+                    float(rotation.x),
+                    float(rotation.y),
+                    float(rotation.z),
+                    float(rotation.w),
+                ),
+            )
+        except TransformException as exc:
+            if topic_name not in self._tf_fallback_warned_topics:
+                self.get_logger().warn(
+                    f"Falling back to manual offset for {topic_name}: "
+                    f"no TF from {target_frame} to {source_frame} ({exc})"
+                )
+                self._tf_fallback_warned_topics.add(topic_name)
+            return self.get_topic_offset(topic_name)
 
     def scan_for_map_topics(self) -> None:
         topics = self.get_topic_names_and_types()
@@ -318,8 +391,9 @@ class MergeMapNode(Node):
         maps_with_offsets = []
 
         for topic in ordered_topics:
-            offset = self.get_topic_offset(topic)
-            maps_with_offsets.append((topic, self.latest_maps[topic], offset))
+            map_msg = self.latest_maps[topic]
+            pose = self.get_map_pose(topic, map_msg)
+            maps_with_offsets.append((topic, map_msg, pose))
 
         merged = merge_all_maps(
             maps_with_offsets,

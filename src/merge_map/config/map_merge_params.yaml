@@ -7,6 +7,7 @@ merge_map:
     output_reliability: "reliable"
     scan_period_sec: 1.0
     merged_frame_id: "map"
+    use_tf_transforms: true
     unknown_value: -1
     occupied_threshold: 50
     overwrite_known_cells: false

@@ -64,6 +64,7 @@ def generate_launch_description():
         DeclareLaunchArgument('x_pose', default_value='0.0'),
         DeclareLaunchArgument('y_pose', default_value='0.0'),
         DeclareLaunchArgument('z_pose', default_value='0.0'),
+        DeclareLaunchArgument('yaw', default_value='0.0'),
     ])
 
     urdf_file_name = f'turtlebot3_waffle.urdf.xacro'
@@ -137,6 +138,7 @@ def generate_launch_description():
     x_pose = LaunchConfiguration('x_pose')
     y_pose = LaunchConfiguration('y_pose')
     z_pose = LaunchConfiguration('z_pose')
+    yaw = LaunchConfiguration('yaw')
 
     ld.add_action(Node(
         package='tf2_ros',
@@ -145,7 +147,7 @@ def generate_launch_description():
         name='map_anchor',
         arguments=[
             x_pose, y_pose, z_pose,
-            '0', '0', '0',
+            yaw, '0', '0',
             'map',
             [namespace, '/map']
         ]
