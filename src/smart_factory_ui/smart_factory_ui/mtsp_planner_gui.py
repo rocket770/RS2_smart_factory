@@ -1316,6 +1316,17 @@ class MainWindow(QMainWindow):
         row1.addWidget(self.nav_mode_combo)
         layout.addLayout(row1)
 
+        row_sim_time = QHBoxLayout()
+        row_sim_time.addWidget(QLabel("Clock:"))
+        self.use_sim_time_btn = QPushButton()
+        self.use_sim_time_btn.setCheckable(True)
+        self.use_sim_time_btn.setChecked(True)
+        self.use_sim_time_btn.toggled.connect(self._on_use_sim_time_toggled)
+        self._update_use_sim_time_button()
+        row_sim_time.addWidget(self.use_sim_time_btn)
+        row_sim_time.addStretch(1)
+        layout.addLayout(row_sim_time)
+
         self.amcl_controls = QWidget()
         row2 = QHBoxLayout(self.amcl_controls)
         row2.setContentsMargins(0, 0, 0, 0)
@@ -1553,6 +1564,20 @@ class MainWindow(QMainWindow):
         else:
             self.nav_status_label.setText("SLAM mode selected. This will start SLAM, merge_map, and explorer.")
 
+    def _on_use_sim_time_toggled(self, checked: bool):
+        self._update_use_sim_time_button()
+        mode_text = "simulation time" if checked else "real robot time"
+        self.log(f"use_sim_time set to {str(checked).lower()} ({mode_text}).")
+
+    def _update_use_sim_time_button(self):
+        enabled = self.use_sim_time_btn.isChecked()
+        self.use_sim_time_btn.setText(
+            f"Sim Time: {'ON' if enabled else 'OFF'}"
+        )
+
+    def _use_sim_time_launch_arg(self) -> str:
+        return f"use_sim_time:={'true' if self.use_sim_time_btn.isChecked() else 'false'}"
+
     def on_browse_map_clicked(self):
         filename, _ = QFileDialog.getOpenFileName(
             self,
@@ -1637,7 +1662,7 @@ class MainWindow(QMainWindow):
             "launch",
             "smart_factory_bringup",
             "multi_robot_nav2_bringup.launch.py",
-            "use_sim_time:=true"
+            self._use_sim_time_launch_arg(),
         ]
         if mode_text == "Load Existing Map (AMCL)":
             map_path = self.map_path_input.text().strip()
