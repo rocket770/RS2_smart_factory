@@ -785,7 +785,7 @@ class MtspPlannerGuiNode(Node):
             depth=10,
         )
         tf_qos = QoSProfile(
-            reliability=ReliabilityPolicy.RELIABLE,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
             durability=DurabilityPolicy.VOLATILE,
             history=HistoryPolicy.KEEP_LAST,
             depth=100,
@@ -932,9 +932,8 @@ class MtspPlannerGuiNode(Node):
         return "map"
 
     def _refresh_robot_positions_from_tf(self):
-        target_frame = self._map_frame()
         for ns in self.robot_namespaces:
-            transform = self._lookup_robot_pose_transform(target_frame, ns)
+            transform = self._lookup_robot_pose_transform(ns)
             if transform is None:
                 continue
             self.robot_positions[ns] = (
@@ -943,13 +942,24 @@ class MtspPlannerGuiNode(Node):
             )
             self.robot_position_sources[ns] = "tf"
 
-    def _lookup_robot_pose_transform(self, target_frame: str, namespace: str) -> Optional[TransformStamped]:
-        for source_frame in (f"{namespace}/base_footprint", f"{namespace}/base_link"):
-            try:
-                return self.tf_buffer.lookup_transform(target_frame, source_frame, Time())
-            except TransformException:
-                continue
+    def _lookup_robot_pose_transform(self, namespace: str) -> Optional[TransformStamped]:
+        target_frames = self._candidate_pose_target_frames(namespace)
+        source_frames = (f"{namespace}/base_footprint", f"{namespace}/base_link")
+        for target_frame in target_frames:
+            for source_frame in source_frames:
+                try:
+                    return self.tf_buffer.lookup_transform(target_frame, source_frame, Time())
+                except TransformException:
+                    continue
         return None
+
+    def _candidate_pose_target_frames(self, namespace: str) -> List[str]:
+        candidates: List[str] = []
+        for frame in (self._map_frame(), "map", f"{namespace}/map"):
+            normalized = frame.lstrip("/")
+            if normalized and normalized not in candidates:
+                candidates.append(normalized)
+        return candidates
 
 
 # -----------------------------
@@ -1627,7 +1637,7 @@ class MainWindow(QMainWindow):
             "launch",
             "smart_factory_bringup",
             "multi_robot_nav2_bringup.launch.py",
-            "use_sim_time:=false"
+            "use_sim_time:=true"
         ]
         if mode_text == "Load Existing Map (AMCL)":
             map_path = self.map_path_input.text().strip()
