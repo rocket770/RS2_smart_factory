@@ -733,6 +733,27 @@ from PyQt5.QtWidgets import (
 # Data models
 # -----------------------------
 
+DEFAULT_ROBOT_NAMESPACES = ["tb1", "tb2", "tb3", "tb4"]
+GENERAL_SETTINGS_CANDIDATES = [
+    os.path.normpath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "smart_factory_bringup",
+            "params",
+            "general_settings.yaml",
+        )
+    ),
+    os.path.join(
+        os.getcwd(),
+        "src",
+        "smart_factory_bringup",
+        "params",
+        "general_settings.yaml",
+    ),
+]
+
 @dataclass
 class WorldPoint:
     x: float
@@ -753,6 +774,32 @@ class MtspResult:
 # ROS node
 # -----------------------------
 
+
+def load_robot_namespaces() -> Tuple[List[str], Optional[str]]:
+    for candidate in GENERAL_SETTINGS_CANDIDATES:
+        if not os.path.exists(candidate):
+            continue
+        try:
+            with open(candidate, "r", encoding="utf-8") as handle:
+                settings = yaml.safe_load(handle) or {}
+        except Exception as exc:
+            return list(DEFAULT_ROBOT_NAMESPACES), f"Failed to read {candidate}: {exc}"
+
+        robots = settings.get("robots", [])
+        namespaces: List[str] = []
+        for robot in robots:
+            if not isinstance(robot, dict):
+                continue
+            name = str(robot.get("name", "")).strip()
+            if name and name not in namespaces:
+                namespaces.append(name)
+
+        if namespaces:
+            return namespaces, None
+        return list(DEFAULT_ROBOT_NAMESPACES), f"No robot names found in {candidate}; using defaults."
+
+    return list(DEFAULT_ROBOT_NAMESPACES), "general_settings.yaml not found; using default robot namespaces."
+
 class MtspPlannerGuiNode(Node):
     def __init__(self):
         super().__init__("mtsp_planner_gui")
@@ -764,8 +811,7 @@ class MtspPlannerGuiNode(Node):
         self.robot_positions: Dict[str, Tuple[float, float]] = {}
         self.robot_position_sources: Dict[str, str] = {}
         self.tf_buffer = Buffer()
-
-        self.robot_namespaces = ["tb1", "tb2", "tb3", "tb4"]
+        self.robot_namespaces, self.robot_namespace_warning = load_robot_namespaces()
         self.save_map_client = self.create_client(SaveMap, "/map_saver/save_map")
         self.explorer_start_client = self.create_client(Trigger, "/multi_robot_explorer/start")
         self.explorer_stop_client = self.create_client(Trigger, "/multi_robot_explorer/stop")
@@ -990,7 +1036,9 @@ class MapCanvas(QLabel):
         self.setText("Waiting for merged /map...")
 
         self.display_mode = "goal"  # goal | move_robot
-        self.selected_robot_namespace = "tb1"
+        self.selected_robot_namespace = (
+            self.ros_node.robot_namespaces[0] if self.ros_node.robot_namespaces else ""
+        )
 
         self.goal_points: List[WorldPoint] = []
         self.robot_starts: Dict[str, WorldPoint] = {}
@@ -1300,6 +1348,8 @@ class MainWindow(QMainWindow):
         self._qt_timer = QTimer(self)
         self._qt_timer.timeout.connect(self._on_timer)
         self._qt_timer.start(100)
+        if self.ros_node.robot_namespace_warning:
+            self.log(self.ros_node.robot_namespace_warning)
 
     def _build_nav_stack_group(self):
         group = QGroupBox("Map Source / Navigation Mode")
@@ -2118,6 +2168,8 @@ class MainWindow(QMainWindow):
             goals_flat.extend([round(p.x, 4), round(p.y, 4)])
 
         planner_action_name = f"/{robot_names[0]}/compute_path_to_pose" if robot_names else "/tb1/compute_path_to_pose"
+        if not robot_names:
+            planner_action_name = "/compute_path_to_pose"
 
         return {
             "mtsp_solver_node": {
