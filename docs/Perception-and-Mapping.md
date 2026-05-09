@@ -11,10 +11,10 @@ This page shows how to run the perception and mapping subsystem as a whole. It r
 
 To launch a single component instead of the full subsystem, use that component page:
 
-- [SLAM](SLAM.md)
-- [AMCL](AMCL.md)
-- [Map Merging](Map-Merging.md)
-- [Exploring](Exploring.md)
+- [SLAM](SLAM)
+- [AMCL](AMCL)
+- [Map Merger](Map-Merger)
+- [SLAM Explorer](SLAM-Explorer)
 
 ## Main bringup files
 
@@ -40,7 +40,7 @@ source install/setup.bash
 ros2 launch smart_factory_bringup multi_robot_gazebo_bringup.launch.py use_sim_time:=true
 ```
 
-For real robots, launch each robot with `namespaced_robot.launch.py`. The full real-robot setup is on [Home](Home.md), but the important rule is that the namespace and starting pose must match `general_settings.yaml`.
+For real robots, launch each robot with `namespaced_robot.launch.py`. The full real-robot setup is on [Home](Home), but the important rule is that the namespace and starting pose must match `general_settings.yaml`.
 
 Example:
 

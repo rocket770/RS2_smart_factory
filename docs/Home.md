@@ -6,9 +6,9 @@ RS2 Smart Factory is a ROS 2 Humble multi-robot TurtleBot3 system for smart fact
 
 ## Key features / subsystem list
 
-- [Perception and Mapping](Perception-and-Mapping.md): per-robot SLAM, merged maps, frontier exploration, saved maps, and localization against an existing factory map.
-- [Interaction and Execution](Interaction-and-Execution.md): GUI task creation, task server behavior, fleet messages, and robot task execution flow.
-- [Motion Planning and Control](Motion-Planning-and-Control.md): namespaced Nav2 bringup, robot navigation, and multi-robot route planning.
+- [Perception and Mapping](Perception-and-Mapping): per-robot SLAM, merged maps, frontier exploration, saved maps, and localization against an existing factory map.
+- [Interaction and Execution](Interaction-and-Execution): GUI task creation, task server behavior, fleet messages, and robot task execution flow.
+- [Motion Planning and Control](Motion-Planning-and-Control): namespaced Nav2 bringup, robot navigation, and multi-robot route planning.
 
 ## Dependencies
 
@@ -234,9 +234,9 @@ Screenshot placeholders:
 
 ## Subsystem specifics
 
-- [Perception and Mapping](Perception-and-Mapping.md)
-- [Interaction and Execution](Interaction-and-Execution.md)
-- [Motion Planning and Control](Motion-Planning-and-Control.md)
+- [Perception and Mapping](Perception-and-Mapping)
+- [Interaction and Execution](Interaction-and-Execution)
+- [Motion Planning and Control](Motion-Planning-and-Control)
 
 ## Troubleshooting & FAQs
 

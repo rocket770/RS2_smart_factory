@@ -4,7 +4,7 @@
 
 SLAM mode runs one `slam_toolbox` node per robot namespace. Each robot builds its own local occupancy grid from its lidar and odometry, then publishes that map under its namespace, for example `/tb1/map`.
 
-SLAM does not create the final shared map by itself. The per-robot maps are consumed by [Map Merging](Map-Merging.md), which publishes the shared `/map`.
+SLAM does not create the final shared map by itself. The per-robot maps are consumed by [Map Merger](Map-Merger), which publishes the shared `/map`.
 
 ## How it works
 
