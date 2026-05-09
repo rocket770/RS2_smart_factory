@@ -40,25 +40,7 @@ Install common system dependencies:
 
 ```bash
 sudo apt update
-sudo apt install -y \
-  ros-humble-navigation2 \
-  ros-humble-nav2-bringup \
-  ros-humble-nav2-msgs \
-  ros-humble-slam-toolbox \
-  ros-humble-gazebo-ros-pkgs \
-  ros-humble-turtlebot3 \
-  ros-humble-turtlebot3-bringup \
-  ros-humble-turtlebot3-description \
-  ros-humble-turtlebot3-gazebo \
-  ros-humble-turtlebot3-navigation2 \
-  ros-humble-turtlebot3-simulations \
-  ros-humble-robot-state-publisher \
-  ros-humble-tf2-ros \
-  ros-humble-xacro \
-  ros-humble-hls-lfcd-lds-driver \
-  python3-pyqt5 \
-  python3-numpy \
-  python3-yaml
+sudo apt install -y ros-humble-navigation2 ros-humble-nav2-bringup ros-humble-nav2-msgs ros-humble-slam-toolbox ros-humble-gazebo-ros-pkgs ros-humble-turtlebot3 ros-humble-turtlebot3-bringup ros-humble-turtlebot3-description ros-humble-turtlebot3-gazebo ros-humble-turtlebot3-navigation2 ros-humble-turtlebot3-simulations ros-humble-robot-state-publisher ros-humble-tf2-ros ros-humble-xacro ros-humble-hls-lfcd-lds-driver python3-pyqt5 python3-numpy python3-yaml
 ```
 
 Use `rosdep` from the workspace to install package dependencies declared in `package.xml` files:
@@ -126,10 +108,8 @@ From the operator workstation, copy the launch file and URDF assets to the robot
 
 ```bash
 cd ~/smart_factory_ws
-scp src/smart_factory_bringup/launch/namespaced_robot.launch.py \
-  ubuntu@<robot-ip>:~/rs2_ws/src/multi_robot_bringup/launch/
-scp -r src/smart_factory_bringup/urdf/* \
-  ubuntu@<robot-ip>:~/rs2_ws/src/multi_robot_bringup/urdf/
+scp src/smart_factory_bringup/launch/namespaced_robot.launch.py ubuntu@<robot-ip>:~/rs2_ws/src/multi_robot_bringup/launch/
+scp -r src/smart_factory_bringup/urdf/* ubuntu@<robot-ip>:~/rs2_ws/src/multi_robot_bringup/urdf/
 ```
 
 Then build on the robot:
@@ -172,6 +152,19 @@ robots:
 
 Robot `tb1` is the reference robot at `(0.0, 0.0)`. Robot `tb2` starts 2.5 meters in the positive x direction and 0.5 meters in the positive y direction from `tb1`. Add more robots by adding more entries and launching each robot with the same namespace and matching starting pose.
 
+### Start simulation if needed
+
+For simulation runs, start Gazebo first:
+
+```bash
+cd ~/smart_factory_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+ros2 launch smart_factory_bringup multi_robot_gazebo_bringup.launch.py use_sim_time:=true
+```
+
+For real-robot runs, skip this step and launch the physical robots instead.
+
 ### Main launch
 
 ```bash
@@ -200,13 +193,10 @@ source /opt/ros/humble/setup.bash
 source ~/rs2_ws/install/setup.bash
 export TURTLEBOT3_MODEL=waffle
 export LDS_MODEL=LDS-01
-ros2 launch multi_robot_bringup namespaced_robot.launch.py \
-  namespace:=tb1 \
-  x_pose:=0.0 \
-  y_pose:=0.0
+ros2 launch multi_robot_bringup namespaced_robot.launch.py namespace:=tb1 x_pose:=0.0 y_pose:=0.0
 ```
 
-Robot `tb2`, 1.7 meters in front of `tb1`:
+Robot `tb2`, 2.5 meters in the positive x direction and 0.5 meters in the positive y direction from `tb1`:
 
 ```bash
 ssh ubuntu@<tb2-ip>
@@ -214,19 +204,13 @@ source /opt/ros/humble/setup.bash
 source ~/rs2_ws/install/setup.bash
 export TURTLEBOT3_MODEL=waffle
 export LDS_MODEL=LDS-01
-ros2 launch multi_robot_bringup namespaced_robot.launch.py \
-  namespace:=tb2 \
-  x_pose:=1.7 \
-  y_pose:=0.0
+ros2 launch multi_robot_bringup namespaced_robot.launch.py namespace:=tb2 x_pose:=2.5 y_pose:=0.5
 ```
 
 Additional robots follow the same pattern:
 
 ```bash
-ros2 launch multi_robot_bringup namespaced_robot.launch.py \
-  namespace:=<robot-name> \
-  x_pose:=<relative-x-meters> \
-  y_pose:=<relative-y-meters>
+ros2 launch multi_robot_bringup namespaced_robot.launch.py namespace:=<robot-name> x_pose:=<relative-x-meters> y_pose:=<relative-y-meters>
 ```
 
 There is no fixed robot count in the wiki workflow. The practical limit depends on available robots, compute, network reliability, and whether every robot has a matching entry in `general_settings.yaml`.
