@@ -81,12 +81,6 @@ After the GUI and nav stack start successfully:
 - After `Run MTSP`, planned routes appear on the map and solver progress is shown in the GUI.
 - After `Start Execution`, robots begin visiting their assigned goals through Nav2.
 
-Screenshot placeholders:
-
-- TODO: Add MTSP GUI screenshot with main controls labeled.
-- TODO: Add screenshot showing planned MTSP routes on the shared map.
-- TODO: Add screenshot showing active execution or paused execution state.
-
 ### AMCL mode
 
 Use this when localizing against an existing map:
