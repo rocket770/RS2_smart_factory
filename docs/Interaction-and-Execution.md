@@ -6,11 +6,13 @@ This subsystem covers how an operator interacts with the multi-robot system and 
 
 The current operator path in this repository is the MTSP GUI planner. It launches the navigation stack, displays the shared map, collects operator-selected goals, runs the MTSP solver, visualizes routes, and executes those routes through Nav2.
 
+The MTSP GUI is responsible for launching and stopping the navigation stack used by the operator workflow, subscribing to the merged `/map`, solver progress, and robot TF, collecting goal points, sending manual navigation goals, launching solver runs, executing MTSP routes through Nav2, and exposing pause, resume, emergency stop, and map-save controls.
+
 This page documents the interaction and execution layer only. Mapping, localization, and exploration details belong to [Perception and Mapping](Perception-and-Mapping), while lower-level navigation stack behavior belongs partly to [Motion Planning and Control](Motion-Planning-and-Control).
 
-## System Overview
+## Main files
 
-### Main files
+These files are the main sources of truth for the GUI-based interaction and execution workflow.
 
 | File | Role |
 | --- | --- |
@@ -18,19 +20,7 @@ This page documents the interaction and execution layer only. Mapping, localizat
 | `src/smart_factory_mtsp_solver/src/mtsp_solver_node.cpp` | MTSP solver node. Reads robot starts and goals from parameters, runs the genetic algorithm, and publishes best-so-far routes on `mtsp_best_solution`. |
 | `src/smart_factory_bringup/launch/multi_robot_nav2_bringup.launch.py` | Launches the navigation stack used by the GUI in either AMCL or SLAM mode. |
 
-### Responsibilities
-
-The MTSP GUI is responsible for:
-
-- launching and stopping the navigation stack used by the operator workflow
-- subscribing to the merged `/map`, solver progress, and robot TF
-- collecting MTSP goal points from map clicks
-- sending one-off manual navigation goals
-- generating and launching the MTSP solver run configuration
-- executing the selected MTSP result through Nav2
-- exposing pause, resume, emergency stop, and map-save controls
-
-### Preconditions and assumptions
+## Before launching
 
 The current workflow assumes:
 
@@ -53,9 +43,7 @@ ros2 launch smart_factory_bringup multi_robot_gazebo_bringup.launch.py use_sim_t
 
 For real robots, launch each robot under the same namespace used in `general_settings.yaml`. Full hardware setup is documented on [Home](Home).
 
-## Operational Workflow
-
-### Start the GUI
+## Launch the subsystem
 
 Run the operator GUI from the workstation:
 
@@ -66,7 +54,7 @@ source install/setup.bash
 ros2 run smart_factory_ui mtsp_planner_gui
 ```
 
-### Operator workflow
+### Current GUI workflow
 
 The normal workflow is:
 
@@ -124,7 +112,7 @@ Current behavior to keep in mind:
 - `Emergency Stop` cancels GUI-controlled goals and clears the current MTSP execution state.
 - The planner cost backend is currently `nav2`, and the solver uses the first planned robot's `ComputePathToPose` action name when generating path costs.
 
-### Expected result
+### Expected outcome
 
 After a successful run:
 
@@ -134,7 +122,7 @@ After a successful run:
 - solver progress and planned routes appear after `Run MTSP`
 - robots begin visiting their assigned goals after `Start Execution`
 
-### Basic verification
+### How to run or test this subsystem independently
 
 Use this as the minimum subsystem-level validation flow:
 
@@ -147,7 +135,7 @@ Use this as the minimum subsystem-level validation flow:
 7. Start execution and confirm `/<robot>/navigate_to_pose` accepts goals.
 8. Optionally verify `Pause`, `Resume`, `Emergency Stop`, and `Save Map`.
 
-## Parameters and Interface
+## Important parameters and controls
 
 ### Operator controls
 
@@ -198,7 +186,7 @@ Use this as the minimum subsystem-level validation flow:
 | `use_sim_time` | `true` / `false` | Nav stack | Bringup launch argument not exposed directly by the GUI. |
 | `enable_rviz` | `true` / `false` | Bringup | Controls per-robot RViz launch. |
 
-### ROS interfaces
+## Interfaces
 
 | Interface | Direction | Meaning |
 | --- | --- | --- |
@@ -214,7 +202,17 @@ Use this as the minimum subsystem-level validation flow:
 | `/multi_robot_explorer/return_home` | Service client | Requests idle robots return home after a map save. |
 | `/multi_robot_explorer/status` | Service client | Used by the GUI to check explorer readiness. |
 
-## Troubleshooting
+## Assumptions and limitations
+
+- The MTSP GUI is the current operator workflow and the main UI path for this subsystem.
+- Route execution depends on Nav2 action servers already being available for the robot namespaces in use.
+- Namespaces, start poses, and TF layout must match `general_settings.yaml` for the overall GUI workflow to behave correctly.
+- The current GUI only supports the hardcoded robot namespaces `tb1`, `tb2`, `tb3`, and `tb4`.
+- The GUI does not expose a direct `use_sim_time` control for the nav-stack launch.
+- Only robots with live TF poses are included in a generated MTSP problem.
+- This page does not replace the detailed workspace installation or robot setup instructions on [Home](Home).
+
+## Troubleshooting & FAQs
 
 ### The GUI opens but no map appears
 
