@@ -4,33 +4,45 @@
 
 This subsystem covers how an operator interacts with the multi-robot system and how planned work is executed on the robots.
 
-The current interaction path in the repository is the MTSP GUI planner. It launches the navigation stack, lets the user click goals on the shared map, runs the MTSP solver, visualizes routes, and executes them through Nav2.
+The current operator path in this repository is the MTSP GUI planner. It launches the navigation stack, displays the shared map, collects operator-selected goals, runs the MTSP solver, visualizes routes, and executes those routes through Nav2.
 
-This page shows the interaction and execution subsystem as a whole. Mapping, localization, and exploration details belong to [Perception and Mapping](Perception-and-Mapping), while robot navigation stack bringup belongs partly to [Motion Planning and Control](Motion-Planning-and-Control).
+This page documents the interaction and execution layer only. Mapping, localization, and exploration details belong to [Perception and Mapping](Perception-and-Mapping), while lower-level navigation stack behavior belongs partly to [Motion Planning and Control](Motion-Planning-and-Control).
 
-## Main files
+## System Overview
 
-These files are the main sources of truth for the interaction and execution subsystem.
+### Main files
 
 | File | Role |
 | --- | --- |
-| `src/smart_factory_ui/smart_factory_ui/mtsp_planner_gui.py` | Current MTSP GUI. Contains the Qt window, ROS node, map canvas, solver launch flow, and route execution logic. |
+| `src/smart_factory_ui/smart_factory_ui/mtsp_planner_gui.py` | Current MTSP GUI. Contains the Qt window, ROS node, map canvas, nav-stack launch flow, solver launch flow, and route execution logic. |
 | `src/smart_factory_mtsp_solver/src/mtsp_solver_node.cpp` | MTSP solver node. Reads robot starts and goals from parameters, runs the genetic algorithm, and publishes best-so-far routes on `mtsp_best_solution`. |
-| `src/smart_factory_bringup/launch/multi_robot_nav2_bringup.launch.py` | Launches the navigation stack used by the GUI in either SLAM or AMCL mode. |
+| `src/smart_factory_bringup/launch/multi_robot_nav2_bringup.launch.py` | Launches the navigation stack used by the GUI in either AMCL or SLAM mode. |
 
-## Before launching
+### Responsibilities
 
-The current MTSP GUI assumes the same general setup as the navigation and mapping stack:
+The MTSP GUI is responsible for:
 
-- In simulation, launch Gazebo first.
-- On real robots, launch each TurtleBot3 under the correct namespace before opening the GUI.
-- Robot namespaces and start poses must match `src/smart_factory_bringup/params/general_settings.yaml`.
-- The current GUI only knows the hardcoded namespaces `tb1`, `tb2`, `tb3`, and `tb4`.
-- Nav2 action servers such as `/<robot>/navigate_to_pose` must exist before route execution can succeed.
-- In AMCL mode, have a saved map YAML ready before starting the nav stack from the GUI.
-- The current GUI does not expose a `use_sim_time` control. It launches `multi_robot_nav2_bringup.launch.py` without overriding that launch argument.
+- launching and stopping the navigation stack used by the operator workflow
+- subscribing to the merged `/map`, solver progress, and robot TF
+- collecting MTSP goal points from map clicks
+- sending one-off manual navigation goals
+- generating and launching the MTSP solver run configuration
+- executing the selected MTSP result through Nav2
+- exposing pause, resume, emergency stop, and map-save controls
 
-For simulation, launch Gazebo first:
+### Preconditions and assumptions
+
+The current workflow assumes:
+
+- In simulation, Gazebo is launched before the GUI.
+- On real robots, each TurtleBot3 is already running under the correct namespace before the GUI starts.
+- Robot namespaces and start poses match `src/smart_factory_bringup/params/general_settings.yaml`.
+- The GUI currently only supports the hardcoded namespaces `tb1`, `tb2`, `tb3`, and `tb4`.
+- Nav2 action servers such as `/<robot>/navigate_to_pose` are available before route execution can succeed.
+- In AMCL mode, a saved map YAML is available before starting the nav stack.
+- The GUI does not expose a direct `use_sim_time` control when launching the nav stack.
+
+For simulation:
 
 ```bash
 cd ~/smart_factory_ws
@@ -39,13 +51,13 @@ source install/setup.bash
 ros2 launch smart_factory_bringup multi_robot_gazebo_bringup.launch.py use_sim_time:=true
 ```
 
-For real robots, launch each robot under the same namespace used in `general_settings.yaml`. The full hardware setup flow is described on [Home](Home).
+For real robots, launch each robot under the same namespace used in `general_settings.yaml`. Full hardware setup is documented on [Home](Home).
 
-## Launch the subsystem
+## Operational Workflow
 
-### Current MTSP GUI workflow
+### Start the GUI
 
-Run the current operator GUI from the workstation:
+Run the operator GUI from the workstation:
 
 ```bash
 cd ~/smart_factory_ws
@@ -54,81 +66,111 @@ source install/setup.bash
 ros2 run smart_factory_ui mtsp_planner_gui
 ```
 
-This is the main interaction workflow in the current codebase.
+### Operator workflow
 
-Inside the GUI:
+The normal workflow is:
 
-- Choose `Load Existing Map (AMCL)` to localize against a saved map.
-- Choose `Use SLAM + Explore` to build a live map and use exploration.
-- Click `Start Nav Stack` to launch `multi_robot_nav2_bringup.launch.py`.
-- Add MTSP goals by clicking on the map in `goal` mode.
-- Use `move_robot` mode to send a one-off manual Nav2 goal to the selected robot.
-- Use `Run MTSP` to launch the solver and wait for a best route set.
-- Use `Start Execution` to send the ordered goals to each robot through Nav2.
-- `Pause`, `Resume`, and `Emergency Stop` control active GUI-owned execution.
-- `Dump Run Config` shows the generated solver parameter block.
-- `Refresh Map` redraws the current map display.
+1. Choose a navigation mode:
+   - `Load Existing Map (AMCL)` for localization against a saved map.
+   - `Use SLAM + Explore` for live map building and frontier exploration.
+2. If using AMCL mode, choose the map YAML file.
+3. Click `Start Nav Stack`.
+4. Wait for the shared map and live robot TF poses to appear in the GUI.
+5. Add MTSP goals by clicking the map in `goal` mode.
+6. Optionally use `move_robot` mode to send a one-off manual Nav2 goal to the selected robot.
+7. Click `Run MTSP` to launch the solver and wait for a valid result.
+8. Click `Start Execution` to send each robot through its assigned goals in order.
+9. Use `Pause`, `Resume`, or `Emergency Stop` as needed during execution.
 
-### Expected outcome
+### Mode-specific behavior
 
-After the GUI and nav stack start successfully:
+#### AMCL mode
 
-- The MTSP GUI window opens on the operator workstation.
-- A shared map appears in the map canvas after `/map` becomes available.
-- Robots with valid TF data appear on the map and can be selected for manual moves.
-- In AMCL mode, robots localize against the selected saved map.
-- In SLAM mode, the merged map grows as robots explore the environment.
-- After `Run MTSP`, planned routes appear on the map and solver progress is shown in the GUI.
-- After `Start Execution`, robots begin visiting their assigned goals through Nav2.
+Use this mode when localizing against an existing saved map.
 
-### AMCL mode
+- The GUI launches the Nav2 stack in localization mode.
+- The selected map YAML is passed to the map server.
+- `Set AMCL Poses From Current` optionally publishes `/<robot>/initialpose` estimates using the live TF pose currently seen by the GUI.
+- This AMCL pose publication is manual from the GUI; it is not automatically triggered by nav-stack startup.
 
-Use this when localizing against an existing map:
+#### SLAM mode
 
-- Set the GUI mode to `Load Existing Map (AMCL)`.
-- Choose the saved map YAML file.
-- Start the nav stack from the GUI.
-- Optionally use `Set AMCL Poses From Current` to publish `/<robot>/initialpose` estimates based on the live TF poses currently seen by the GUI.
+Use this mode when building a new map.
 
-### SLAM mode
+- The GUI launches `multi_robot_nav2_bringup.launch.py` with `use_slam:=true`.
+- The SLAM, map merge, and explorer stack start together.
+- The explorer remains paused after launch until the user presses `Resume`.
+- `Save Map` calls `/map_saver/save_map` to request a saved merged map.
 
-Use this when building a new map:
+### Execution behavior
 
-- Set the GUI mode to `Use SLAM + Explore`.
-- Start the nav stack from the GUI.
-- The GUI launches the SLAM, map merge, and explorer stack through `multi_robot_nav2_bringup.launch.py use_slam:=true`.
-- After launch, the explorer remains paused until the user presses `Resume`.
-- When the merged `/map` becomes available, use it for goal selection and MTSP planning.
-- Use `Save Map` to request a saved map from `/map_saver/save_map`.
+The current execution flow is:
 
-## Important parameters and controls
+1. The GUI subscribes to `/map`, `mtsp_best_solution`, and shared or namespaced TF topics.
+2. The GUI builds the MTSP problem from live robot TF poses and operator-selected goal points.
+3. `Run MTSP` writes a temporary solver parameter file in `/tmp` and launches `mtsp_solver_node` as a separate ROS 2 process.
+4. The solver publishes best-so-far routes as JSON on `mtsp_best_solution`.
+5. The GUI renders the current best generation, total cost, and ordered routes on the map.
+6. `Start Execution` sends assigned goals to each robot through `/<robot>/navigate_to_pose`.
+7. When one goal succeeds, the GUI sends the next goal for that robot until the route is complete.
 
-### Navigation mode controls
+Current behavior to keep in mind:
 
-| Control or parameter | Values | Used by | Meaning |
-| --- | --- | --- | --- |
-| GUI mode | `Load Existing Map (AMCL)` / `Use SLAM + Explore` | `mtsp_planner_gui.py` | Chooses whether the GUI launches AMCL mode or SLAM mode. |
-| `map` | Map YAML path | AMCL mode | Existing map loaded by Nav2 map server. |
-| `use_slam` | `true` / `false` | `multi_robot_nav2_bringup.launch.py` | Chooses SLAM or localization mode. |
-| `use_sim_time` | `true` / `false` | Nav stack | This is a bringup launch argument, but the current GUI does not expose it directly. |
-| `enable_rviz` | `true` / `false` | Bringup | Controls per-robot RViz launch. |
+- MTSP start positions come from live TF poses, not from manually clicked move targets.
+- Only robots with live TF poses are included in a generated MTSP problem.
+- Manual move commands and MTSP execution both use Nav2 `NavigateToPose`.
+- `Pause` cancels active GUI-controlled goals but preserves execution progress so it can resume.
+- `Resume` continues paused MTSP execution and also resumes explorer behavior if the SLAM explorer stack is active.
+- `Emergency Stop` cancels GUI-controlled goals and clears the current MTSP execution state.
+- The planner cost backend is currently `nav2`, and the solver uses the first planned robot's `ComputePathToPose` action name when generating path costs.
 
-### Map interaction and action controls
+### Expected result
+
+After a successful run:
+
+- the GUI window opens on the operator workstation
+- a shared map appears once `/map` is available
+- robots with valid TF data appear on the map
+- solver progress and planned routes appear after `Run MTSP`
+- robots begin visiting their assigned goals after `Start Execution`
+
+### Basic verification
+
+Use this as the minimum subsystem-level validation flow:
+
+1. Start Gazebo for simulation, or launch the real robots under the correct namespaces.
+2. Start the MTSP GUI.
+3. Select AMCL or SLAM mode and start the nav stack.
+4. Confirm the GUI receives `/map` and at least one robot pose from TF.
+5. Add one or more goals and run MTSP.
+6. Confirm `mtsp_best_solution` updates and a route is shown in the GUI.
+7. Start execution and confirm `/<robot>/navigate_to_pose` accepts goals.
+8. Optionally verify `Pause`, `Resume`, `Emergency Stop`, and `Save Map`.
+
+## Parameters and Interface
+
+### Operator controls
 
 | Control | Meaning |
 | --- | --- |
+| GUI mode | Chooses `Load Existing Map (AMCL)` or `Use SLAM + Explore`. |
+| `map` path | Saved map YAML used in AMCL mode. |
 | `goal` click mode | Adds MTSP goal points to the current planning problem. |
 | `move_robot` click mode | Sends a manual `NavigateToPose` goal to the selected robot. |
 | `Robot` selector | Chooses which robot receives a manual move target. |
+| `Set AMCL Poses From Current` | Publishes `/<robot>/initialpose` estimates using current live TF poses. |
 | `Clear Goals` | Removes all currently selected MTSP goals from the GUI. |
 | `Clear Move Targets` | Clears the displayed manual move target markers. |
-| `Start Nav Stack` | Launches the Nav2 bringup process from the GUI. |
-| `Stop Nav Stack` | Sends a stop signal to the nav bringup process launched by the GUI. |
+| `Start Nav Stack` | Launches the nav-stack bringup process from the GUI. |
+| `Stop Nav Stack` | Stops the nav-stack process launched by the GUI. |
 | `Pause` | Pauses GUI-controlled execution and requests explorer pause. |
 | `Resume` | Resumes GUI-controlled execution and requests explorer resume. |
-| `Emergency Stop` | Cancels GUI-controlled goals and clears the active MTSP execution state. |
-| `Dump Run Config` | Writes the current solver config to the summary pane. |
+| `Emergency Stop` | Cancels GUI-controlled goals and clears active MTSP execution state. |
+| `Run MTSP` | Launches the solver with the current problem and hyperparameters. |
+| `Start Execution` | Executes the latest valid MTSP result through Nav2. |
+| `Dump Run Config` | Shows the generated solver parameter block. |
 | `Refresh Map` | Rebuilds the displayed map image from the latest `/map`. |
+| `Save Map` | Requests map saving through `/map_saver/save_map` in SLAM mode. |
 
 ### MTSP run parameters
 
@@ -148,60 +190,22 @@ Use this when building a new map:
 | `planner_server_timeout_ms` | `5000` | Timeout while waiting for the planner action server. |
 | `planner_result_timeout_ms` | `10000` | Timeout while waiting for a path result. |
 
-## Execution behavior
+### Launch parameters
 
-### MTSP GUI execution flow
+| Parameter | Values | Used by | Meaning |
+| --- | --- | --- | --- |
+| `use_slam` | `true` / `false` | `multi_robot_nav2_bringup.launch.py` | Chooses SLAM or localization mode. |
+| `use_sim_time` | `true` / `false` | Nav stack | Bringup launch argument not exposed directly by the GUI. |
+| `enable_rviz` | `true` / `false` | Bringup | Controls per-robot RViz launch. |
 
-The current MTSP GUI follows this execution flow:
-
-1. The GUI subscribes to the merged `/map`, the `mtsp_best_solution` progress topic, and shared or namespaced TF topics.
-2. The GUI builds the MTSP problem from live robot TF positions and user-clicked goal points.
-3. `Run MTSP` writes a temporary parameter file and launches `mtsp_solver_node` as a separate ROS 2 process.
-4. The solver publishes best routes as JSON on `mtsp_best_solution`.
-5. The GUI displays the current best generation, total cost, and ordered routes on top of the map.
-6. `Start Execution` sends each assigned goal to `/<robot>/navigate_to_pose` in order.
-7. When one goal succeeds, the GUI sends the next goal for that robot until the route is complete.
-
-Important current behavior:
-
-- The current GUI uses live TF robot positions as MTSP starts. Manually clicked move targets are for manual motion commands, not MTSP start-state definition.
-- Only robots with live TF positions are included in the MTSP run configuration.
-- Manual move commands and MTSP execution both use Nav2 `NavigateToPose`.
-- The GUI writes a temporary solver parameter file in `/tmp` and launches the solver as a separate process.
-- The GUI also writes a temporary solver log file and reports solver failures from that log when possible.
-- `Pause` cancels active GUI-controlled goals and keeps MTSP progress so execution can resume later.
-- `Resume` restarts paused MTSP execution and also resumes explorer behavior if the SLAM explorer stack is active.
-- `Emergency Stop` cancels GUI-controlled goals and clears the current MTSP execution state.
-- The planner cost backend is currently `nav2`, and the solver uses the first planned robot's `ComputePathToPose` action name when generating path costs.
-
-## How to run or test this subsystem independently
-
-Use this procedure to test the interaction and execution subsystem without documenting every other subsystem in detail:
-
-1. Start Gazebo first for a simulation test, or launch each real robot under the correct namespace.
-2. Start the MTSP GUI from the operator workstation.
-3. Choose either `Load Existing Map (AMCL)` or `Use SLAM + Explore`.
-4. Click `Start Nav Stack` and wait for the map and robot TF data to appear in the GUI.
-5. Add one or more goal points on the map in `goal` mode.
-6. Click `Run MTSP` and confirm the GUI shows a route set and solver progress.
-7. Click `Start Execution` and confirm robots begin moving toward assigned goals.
-8. Optionally test `Pause`, `Resume`, `Emergency Stop`, and `Save Map` to verify control actions behave as expected.
-
-Minimum success checks:
-
-- The GUI receives `/map` updates.
-- At least one robot pose is visible from TF.
-- `mtsp_best_solution` updates after `Run MTSP`.
-- `/<robot>/navigate_to_pose` accepts goals during manual movement or MTSP execution.
-
-## Interfaces
+### ROS interfaces
 
 | Interface | Direction | Meaning |
 | --- | --- | --- |
-| `/map` | Input | Shared occupancy grid shown in the MTSP GUI. |
+| `/map` | Input | Shared occupancy grid shown in the GUI. |
 | `mtsp_best_solution` | Input to GUI / output from solver | Best-so-far MTSP solution encoded as JSON in `std_msgs/String`. |
 | `/tf`, `/tf_static` | Input | Shared TF used to recover robot poses. |
-| `/<robot>/tf`, `/<robot>/tf_static` | Input | Namespaced TF used by the MTSP GUI. |
+| `/<robot>/tf`, `/<robot>/tf_static` | Input | Namespaced TF used when present. |
 | `/<robot>/navigate_to_pose` | Output action | Used for manual moves and MTSP execution. |
 | `/<robot>/initialpose` | Output | AMCL initial pose estimates published from the GUI. |
 | `/map_saver/save_map` | Service client | Saves a merged map in SLAM mode. |
@@ -210,23 +214,13 @@ Minimum success checks:
 | `/multi_robot_explorer/return_home` | Service client | Requests idle robots return home after a map save. |
 | `/multi_robot_explorer/status` | Service client | Used by the GUI to check explorer readiness. |
 
-## Assumptions and limitations
-
-- The MTSP GUI is the current operator workflow and the main UI path to document.
-- Route execution depends on Nav2 action servers already being available for the robot namespaces in use.
-- Namespaces, start poses, and TF layout must match `general_settings.yaml` for the overall interaction flow to behave correctly.
-- The current GUI only supports the hardcoded robot namespaces `tb1`, `tb2`, `tb3`, and `tb4`.
-- The GUI does not expose a direct `use_sim_time` control for the nav stack launch.
-- Only robots with live TF poses are included in a generated MTSP problem.
-- This page does not replace the detailed setup instructions on [Home](Home) for workspace installation or real-robot preparation.
-
-## Troubleshooting & FAQs
+## Troubleshooting
 
 ### The GUI opens but no map appears
 
-- Confirm the nav stack actually started from the GUI.
+- Confirm the nav stack started successfully from the GUI.
 - Check that `/map` is being published.
-- In AMCL mode, confirm the selected map YAML file exists and loads correctly.
+- In AMCL mode, confirm the selected map YAML exists and loads correctly.
 - In SLAM mode, wait for the merged map to be produced after SLAM and map merging start.
 
 ### `Run MTSP` does not produce a route
@@ -247,10 +241,10 @@ Minimum success checks:
 
 - Confirm the selected saved map matches the real or simulated environment.
 - Confirm robot starting poses and namespaces match `general_settings.yaml`.
-- Use `Set AMCL Poses From Current` if live TF data is available and an updated initial estimate is needed.
+- Use `Set AMCL Poses From Current` if a new AMCL initial estimate is needed and live TF data is already available.
 
 ### SLAM mode starts but exploration does not continue
 
-- Confirm the nav stack process launched successfully from the GUI.
+- Confirm the nav-stack process launched successfully from the GUI.
 - Check whether the explorer services under `/multi_robot_explorer/*` are available.
-- Press `Resume` because the explorer remains paused after launch until the user resumes it.
+- Press `Resume`, because the explorer remains paused after launch until the user resumes it.
