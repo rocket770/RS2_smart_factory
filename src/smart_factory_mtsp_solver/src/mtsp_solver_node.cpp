@@ -13,6 +13,19 @@
 
 namespace smart_factory_mtsp_solver
 {
+namespace
+{
+
+void append_json_number(std::ostringstream & ss, double value)
+{
+  if (std::isfinite(value)) {
+    ss << value;
+  } else {
+    ss << "null";
+  }
+}
+
+}  // namespace
 
   MtspSolverNode::MtspSolverNode()
   : Node("mtsp_solver_node"), started_(false)
@@ -154,6 +167,14 @@ namespace smart_factory_mtsp_solver
 
     const Solution solution = ga.solve(problem, params, callback, path_cost_provider.get());
 
+    if (publish_progress) {
+      ProgressState final_progress;
+      final_progress.generation = params.generations;
+      final_progress.total_cost = solution.total_cost;
+      final_progress.routes = solution.routes;
+      publish_progress_message(final_progress, problem);
+    }
+
     log_solution(solution, problem);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -202,7 +223,9 @@ namespace smart_factory_mtsp_solver
 
     ss << "{";
     ss << "\"generation\":" << progress.generation << ",";
-    ss << "\"cost\":" << progress.total_cost << ",";
+    ss << "\"cost\":";
+    append_json_number(ss, progress.total_cost);
+    ss << ",";
 
     ss << "\"robot_starts\":[";
     for (std::size_t i = 0; i < problem.robot_starts.size(); ++i) {

@@ -813,12 +813,20 @@ class MtspPlannerGuiNode(Node):
     def _on_result(self, msg: String):
         try:
             data = json.loads(msg.data)
+            cost_value = data.get("cost")
+            if cost_value is None:
+                return
+
+            cost = float(cost_value)
+            if not math.isfinite(cost):
+                return
+
             self.latest_result = MtspResult(
                 robot_starts=[tuple(p) for p in data["robot_starts"]],
                 goals=[tuple(p) for p in data["goals"]],
                 routes=[list(r) for r in data["routes"]],
                 generation=int(data["generation"]),
-                cost=float(data["cost"]),
+                cost=cost,
             )
         except Exception as exc:
             self.get_logger().error(f"Failed to parse MTSP result: {exc}")
