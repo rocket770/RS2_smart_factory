@@ -1,4 +1,4 @@
-# Exploring
+# SLAM Explorer
 
 ## What it does
 
@@ -25,7 +25,7 @@ Planning loop:
 5. Nearby clusters are merged using `frontier_merge_radius_m`.
 6. Frontiers too close to active goals or recently blacklisted goals are filtered out.
 7. Idle robots are paired with candidate frontiers. For each robot/frontier pair, the node picks a usable goal cell from that frontier and computes a score.
-8. Lower scores are preferred. The score mainly uses distance, then subtracts a size bonus for larger frontiers and applies a home-bias penalty so robots tend to explore areas closer to their own starting region. (I will need to undo this, orignally to help with multi robot on small maps but doesnt work when SLAM is slow.)
+8. Lower scores are preferred. The score mainly uses distance, then subtracts a size bonus for larger frontiers and applies a home-bias penalty so robots tend to explore areas closer to their own starting region.
 9. The global assignment step chooses robot/frontier pairs while preventing two robots from taking the same frontier or goals closer than `min_frontier_separation_m`.
 10. Selected goals are sent as `NavigateToPose` goals in the shared `map` frame.
 

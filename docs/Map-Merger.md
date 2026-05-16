@@ -1,4 +1,4 @@
-# Map Merging
+# Map Merger
 
 ## What it does
 

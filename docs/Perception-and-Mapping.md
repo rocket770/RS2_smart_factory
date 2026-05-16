@@ -14,6 +14,7 @@ To launch a single component instead of the full subsystem, use that component p
 - [SLAM](SLAM)
 - [AMCL](AMCL)
 - [Map Merger](Map-Merger)
+- [Map Saving](Map-Saving)
 - [SLAM Explorer](SLAM-Explorer)
 
 ## Main bringup files
@@ -131,3 +132,28 @@ In SLAM mode, each robot owns a local map frame such as `tb1/map`; static transf
 | Real robots | `namespaced_robot.launch.py` publishes `map -> <namespace>/map` using the robot's `x_pose`, `y_pose`, and `z_pose` launch args. This anchors each robot's local SLAM map relative to the shared map frame. | AMCL initial poses come from `general_settings.yaml`; the shared map comes from map server, and AMCL publishes each robot's localization transform. |
 
 The practical rule is simple: launch arguments on real robots and entries in `general_settings.yaml` must describe the same robot layout.
+
+## Perception and mapping troubleshooting
+
+These checks are specific to the mapping stack: namespaced scans and odometry, per-robot SLAM maps, the merged `/map`, map saving, and explorer robot discovery. Nav2 costmap or planner failures can appear nearby in the logs, but start here only when the symptom affects mapping, map merge, saved maps, or frontier discovery.
+
+| Symptom | Likely mapping cause | What it affects | Quick check | Fix | Image |
+| --- | --- | --- | --- | --- | --- |
+| Robot topics from real TurtleBots do not appear on the workstation. | `ROS_DOMAIN_ID` differs between the robot and workstation, or ROS 2 was not sourced in one terminal. | `merge_map` cannot discover `/tbN/map`; explorer cannot discover robot namespaces. | `python3 tools/perception_mapping/check_ros_domain.py` | Set the same `ROS_DOMAIN_ID` on every robot and the workstation, then relaunch the affected terminals. | TODO |
+| SLAM maps or explorer robot poses look stale, and logs mention old data, future data, extrapolation, or message filter drops. | Robot and workstation clocks are not synchronized. This is common when a TurtleBot date is wrong. | SLAM and explorer receive TF or scan messages with timestamps that do not line up. | `python3 tools/perception_mapping/check_time_sync.py` | Enable NTP/time sync on every machine and relaunch mapping after clocks agree. | TODO |
+| `/map` appears late, costmaps take a long time to fill, or map updates pause during real-robot runs. | ROS 2 traffic is delayed or dropped on the network. | Per-robot maps may arrive late; map merge and explorer startup can lag. | `python3 tools/perception_mapping/check_ros_network_logs.py` | Wait for discovery to settle, keep robots on the same reliable network, reduce extra RViz/topic load, and restart only if topics never recover. | TODO |
+| Merged map is rotated, doubled, or badly misaligned even though each robot's local map looks usable. | Real robots did not start with the same heading. `namespaced_robot.launch.py` anchors `map -> <namespace>/map` with x/y/z only, so yaw is effectively assumed to match. | The shared `/map` is wrong even if `/tb1/map` and `/tb2/map` individually look reasonable. | Check physical start angles before launch and compare `general_settings.yaml` poses. | Start all robots facing the same direction and keep `namespace`, `x_pose`, and `y_pose` consistent with `general_settings.yaml`. | TODO: phone photo |
+| A robot map exists but is not included in `/map`. | The map topic name does not match `map_topic_regex`, currently `^/tb\d+/map$`. | `merge_map` ignores that robot's occupancy grid. | `ros2 topic list | sort | rg '^/tb[0-9]+/map$|^/map$'` | Use `tb1`, `tb2`, etc. namespaces or update `map_topic_regex` intentionally. | TODO |
+| Logs say a queue is full, but `/tbN/map` and `/map` continue updating. | A subscriber is falling behind briefly during high topic load. | Usually none; it is normally safe to ignore if mapping continues. | Check that `/map` still publishes: `ros2 topic echo /map --once --qos-durability transient_local` | Ignore occasional messages. If constant, reduce RViz displays or other high-rate subscribers. | TODO |
+| Map saving returns `false` or produces no files. | The output directory does not exist, the path is not writable, or no merged `/map` has arrived yet. | Saved YAML/image is missing or invalid for later AMCL. | `python3 tools/perception_mapping/check_map_file.py /home/nick/maps/factory_merged.yaml` after saving | Create the directory, use an absolute writable path prefix, confirm `/map_saver/save_map` exists, and wait for `/map` before saving. | TODO |
+
+## Diagnostic scripts
+
+The helper scripts are intentionally small and standalone:
+
+| Script | Use |
+| --- | --- |
+| `tools/perception_mapping/check_ros_domain.py` | Prints local `ROS_DOMAIN_ID`, checks whether `ros2 topic list` is available, and summarizes visible mapping topics. |
+| `tools/perception_mapping/check_time_sync.py` | Prints local UTC time, optional `timedatectl` sync state, and scans ROS logs for timestamp/TF symptoms. Run it on each machine and compare the UTC line. |
+| `tools/perception_mapping/check_ros_network_logs.py` | Scans ROS logs for DDS, discovery, socket, transport, timeout, and queue-pressure hints. |
+| `tools/perception_mapping/check_map_file.py` | Checks that a saved map YAML and its image exist and that PGM/PNG dimensions can be read. |
