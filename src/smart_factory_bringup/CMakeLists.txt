@@ -16,7 +16,7 @@ find_package(ament_cmake REQUIRED)
 ################################################################################
 # Install
 ################################################################################
-install(DIRECTORY launch models rviz urdf worlds params map
+install(DIRECTORY launch models rviz urdf worlds params map behavior_trees
   DESTINATION share/${PROJECT_NAME}/
 )
 

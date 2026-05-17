@@ -35,6 +35,21 @@ def generate_params(context, *args, **kwargs):
 
     params_file = LaunchConfiguration('params_file').perform(context)
     namespace = LaunchConfiguration('namespace').perform(context)
+    bringup_dir = get_package_share_directory('smart_factory_bringup')
+    bt_xml = os.path.join(
+        bringup_dir,
+        'behavior_trees',
+        'navigate_to_pose_w_fast_replanning_safe_recovery.xml'
+    )
+
+    if not os.path.exists(bt_xml):
+        params_dir = os.path.dirname(os.path.realpath(params_file))
+        bt_xml = os.path.normpath(os.path.join(
+            params_dir,
+            '..',
+            'behavior_trees',
+            'navigate_to_pose_w_fast_replanning_safe_recovery.xml'
+        ))
 
     with open(params_file, 'r') as f:
         data = f.read()
@@ -43,6 +58,7 @@ def generate_params(context, *args, **kwargs):
     data = data.replace('__ODOM_FRAME__', f'{namespace}/odom')
     data = data.replace('__BASE_FRAME__', f'{namespace}/base_footprint')
     data = data.replace('__SCAN_TOPIC__', f'/{namespace}/scan')
+    data = data.replace('__BT_XML__', bt_xml)
 
     tmp = tempfile.NamedTemporaryFile(mode='w', delete=False)
     tmp.write(data)

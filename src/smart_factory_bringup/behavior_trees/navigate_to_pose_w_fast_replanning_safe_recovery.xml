@@ -1,0 +1,59 @@
+<!--
+  Conservative TurtleBot3 navigation tree for tight real-world aisles.
+  Replans at 2 Hz. If DWB cannot find a valid local trajectory, it immediately
+  backs up, moves to a checked temporary pose behind the robot, clears the local
+  costmap, and retries the original goal.
+  It avoids spin recovery near shelving or walls.
+-->
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <RecoveryNode number_of_retries="8" name="NavigateRecovery">
+      <PipelineSequence name="NavigateWithFastReplanning">
+        <RateController hz="2.0">
+          <RecoveryNode number_of_retries="1" name="ComputePathToPose">
+            <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+            <ClearEntireCostmap name="ClearGlobalCostmap-Context" service_name="global_costmap/clear_entirely_global_costmap"/>
+          </RecoveryNode>
+        </RateController>
+        <RecoveryNode number_of_retries="1" name="FollowPath">
+          <Fallback name="ValidateReplanYieldOrFollowPath">
+            <Sequence name="ValidateYieldOrFollowPath">
+              <IsPathValid path="{path}" server_timeout="0.1"/>
+              <Fallback name="YieldOrFollowPath">
+                <Sequence name="YieldToNearbyRobot">
+                  <IsRobotTooClose distance="0.55"/>
+                  <BackUp name="BackUpForNearbyRobot" backup_dist="0.12" backup_speed="0.03"/>
+                  <Wait name="WaitForNearbyRobot" wait_duration="1"/>
+                  <AlwaysFailure/>
+                </Sequence>
+                <FollowPath path="{path}" controller_id="FollowPath"/>
+              </Fallback>
+            </Sequence>
+            <Sequence name="ReplanBlockedPathAndFollow">
+              <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+              <FollowPath path="{path}" controller_id="FollowPath"/>
+            </Sequence>
+          </Fallback>
+          <Sequence name="BackUpEscapeClearAndRetryFollowPath">
+            <BackUp name="BackUpBeforeRetry" backup_dist="0.16" backup_speed="0.03"/>
+            <ComputeRecoveryPose pose="{recovery_goal}" distance="0.35" min_distance="0.15" check_radius="0.18" costmap_service="local_costmap/get_costmap"/>
+            <ComputePathToPose goal="{recovery_goal}" path="{recovery_path}" planner_id="GridBased"/>
+            <FollowPath path="{recovery_path}" controller_id="FollowPath"/>
+            <ClearEntireCostmap name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
+          </Sequence>
+        </RecoveryNode>
+      </PipelineSequence>
+      <ReactiveFallback name="RecoveryFallback">
+        <GoalUpdated/>
+        <RoundRobin name="RecoveryActions">
+          <BackUp name="BackUpRecovery" backup_dist="0.20" backup_speed="0.03"/>
+          <Sequence name="ClearingActions">
+            <ClearEntireCostmap name="ClearLocalCostmap-Subtree" service_name="local_costmap/clear_entirely_local_costmap"/>
+            <ClearEntireCostmap name="ClearGlobalCostmap-Subtree" service_name="global_costmap/clear_entirely_global_costmap"/>
+          </Sequence>
+          <Wait wait_duration="2"/>
+        </RoundRobin>
+      </ReactiveFallback>
+    </RecoveryNode>
+  </BehaviorTree>
+</root>
