@@ -8,6 +8,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch.actions import TimerAction
 
 
 def generate_launch_description():
@@ -39,51 +40,58 @@ def generate_launch_description():
         'slam_toolbox_dynamic_overlay.yaml'
     )
 
-    for robot in robots:
+    robot_start_delay = 2.5
+
+    for robot_index, robot in enumerate(robots):
         namespace = robot['name']
 
         map_frame = f'{namespace}/map'
         odom_frame = f'{namespace}/odom'
         base_frame = f'{namespace}/base_footprint'
 
-        ld.add_action(Node(
-            package='slam_toolbox',
-            executable='async_slam_toolbox_node',
-            name='slam_toolbox',
-            namespace=namespace,
-            output='screen',
-            parameters=[
-                default_slam_params_file,
-                slam_overlay_params_file,
-                {
-                    'use_sim_time': use_sim_time,
-                    'odom_frame': odom_frame,
-                    'base_frame': base_frame,
-                    'map_frame': map_frame,
-                    'scan_topic': f'/{namespace}/scan',
-                    'qos_overrides': {
-                        f'/{namespace}/scan': {
-                            'subscription': {'reliability': 'best_effort'},
-                        },
-                        f'/{namespace}/map': {
-                            'publisher': {'reliability': 'best_effort'},
-                        },
-                        f'/{namespace}/map_metadata': {
-                            'publisher': {'reliability': 'best_effort'},
-                        },
-                        f'/{namespace}/map_updates': {
-                            'publisher': {'reliability': 'best_effort'},
-                        },
-                    },
-                    # 'transform_timeout': 0.5,
-                    # 'tf_buffer_duration': 30.0,
-                }
-            ],
-            remappings=[
-                ('/scan', f'/{namespace}/scan'),
-                ('/map', f'/{namespace}/map'),
-                ('/map_metadata', f'/{namespace}/map_metadata'),
-                ('/map_updates', f'/{namespace}/map_updates'),
+        ld.add_action(TimerAction(
+            period=robot_index * robot_start_delay,
+            actions=[
+                Node(
+                    package='slam_toolbox',
+                    executable='async_slam_toolbox_node',
+                    name='slam_toolbox',
+                    namespace=namespace,
+                    output='screen',
+                    parameters=[
+                        default_slam_params_file,
+                        slam_overlay_params_file,
+                        {
+                            'use_sim_time': use_sim_time,
+                            'odom_frame': odom_frame,
+                            'base_frame': base_frame,
+                            'map_frame': map_frame,
+                            'scan_topic': f'/{namespace}/scan',
+                            'qos_overrides': {
+                                f'/{namespace}/scan': {
+                                    'subscription': {'reliability': 'best_effort'},
+                                },
+                                f'/{namespace}/map': {
+                                    'publisher': {'reliability': 'best_effort'},
+                                },
+                                f'/{namespace}/map_metadata': {
+                                    'publisher': {'reliability': 'best_effort'},
+                                },
+                                f'/{namespace}/map_updates': {
+                                    'publisher': {'reliability': 'best_effort'},
+                                },
+                            },
+                            # 'transform_timeout': 0.5,
+                            # 'tf_buffer_duration': 30.0,
+                        }
+                    ],
+                    remappings=[
+                        ('/scan', f'/{namespace}/scan'),
+                        ('/map', f'/{namespace}/map'),
+                        ('/map_metadata', f'/{namespace}/map_metadata'),
+                        ('/map_updates', f'/{namespace}/map_updates'),
+                    ]
+                )
             ]
         ))
     
@@ -114,7 +122,7 @@ def generate_launch_description():
             'use_sim_time': use_sim_time,
             'autostart': True,
             'node_names': ['map_saver']
-        }]
+        }]s
     ))
 
     return ld

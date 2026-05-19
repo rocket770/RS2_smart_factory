@@ -11,7 +11,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch.substitutions import PythonExpression
-
+from launch.actions import TimerAction
 
 def generate_launch_description():
     ld = LaunchDescription()
@@ -147,30 +147,37 @@ def generate_launch_description():
         condition=UnlessCondition(use_slam)
     ))
 
-    for robot in robots:
+    for robot_index, robot in enumerate(robots):
         namespace = robot['name']
         initial_pose_x = str(robot.get('initial_pose_x', robot['x_pose']))
         initial_pose_y = str(robot.get('initial_pose_y', robot['y_pose']))
         initial_pose_yaw = str(robot.get('initial_pose_yaw', robot.get('yaw', 0.0)))
 
-        ld.add_action(IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(nav_launch_dir, 'bringup_launch.py')
-            ),
-            launch_arguments={
-                'use_slam': use_slam,
-                'namespace': namespace,
-                'use_namespace': 'True',
-                'map_server': 'False',
-                'map': map_file,
-                'params_file': params_file,
-                'autostart': 'True',
-                'use_sim_time': use_sim_time,
-                'log_level': 'warn',
-                'initial_pose_x': initial_pose_x,
-                'initial_pose_y': initial_pose_y,
-                'initial_pose_yaw': initial_pose_yaw,
-            }.items(),
+        robot_start_delay = 2.5
+
+        ld.add_action(TimerAction(
+            period=robot_index * robot_start_delay,
+            actions=[
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        os.path.join(nav_launch_dir, 'bringup_launch.py')
+                    ),
+                    launch_arguments={
+                        'use_slam': use_slam,
+                        'namespace': namespace,
+                        'use_namespace': 'True',
+                        'map_server': 'False',
+                        'map': map_file,
+                        'params_file': params_file,
+                        'autostart': 'True',
+                        'use_sim_time': use_sim_time,
+                        'log_level': 'warn',
+                        'initial_pose_x': initial_pose_x,
+                        'initial_pose_y': initial_pose_y,
+                        'initial_pose_yaw': initial_pose_yaw,
+                    }.items(),
+                )
+            ]
         ))
 
         ld.add_action(Node(
