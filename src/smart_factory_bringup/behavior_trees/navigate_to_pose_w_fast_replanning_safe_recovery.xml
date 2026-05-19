@@ -18,7 +18,7 @@
         <RecoveryNode number_of_retries="1" name="FollowPath">
           <Fallback name="ValidateReplanYieldOrFollowPath">
             <Sequence name="ValidateYieldOrFollowPath">
-              <IsPathValid path="{path}" server_timeout="0.1"/>
+              <IsPathValid path="{path}"/>
               <Fallback name="YieldOrFollowPath">
                 <Sequence name="YieldToNearbyRobot">
                   <IsRobotTooClose distance="0.55"/>

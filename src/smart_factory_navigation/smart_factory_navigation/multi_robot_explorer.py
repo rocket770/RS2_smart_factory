@@ -328,20 +328,16 @@ class MultiRobotExplorer(Node):
     def _handle_start(self, request, response):
         del request
         self.paused = False
-        captured = []
-        missing = []
-        for ns, robot in sorted(self.robots.items()):
-            if robot.last_pose_xy is not None:
-                robot.home_pose_xy = robot.last_pose_xy
-                captured.append(f"{ns}=({robot.last_pose_xy[0]:.2f},{robot.last_pose_xy[1]:.2f})")
-            else:
-                missing.append(ns)
+        captured, missing = self._capture_missing_home_poses()
         response.success = True
         response.message = 'Explorer running.'
         if captured:
             response.message += ' Captured home poses: ' + ', '.join(captured)
         if missing:
-            response.message += ' Missing pose for: ' + ', '.join(missing)
+            response.message += (
+                ' Missing pose for: ' + ', '.join(missing)
+                + f'; will retry every {self.discovery_period_sec:.1f}s.'
+            )
         self.get_logger().info(response.message)
         return response
 
@@ -455,7 +451,25 @@ class MultiRobotExplorer(Node):
         for ns in stale_namespaces:
             self.get_logger().warn(f'Robot {ns} became stale; keeping it discovered but temporarily unavailable.')
 
+        if not self.paused:
+            captured, _ = self._capture_missing_home_poses()
+            for item in captured:
+                self.get_logger().info(f'Captured delayed home pose: {item}')
+
         self._publish_debug_markers()
+
+    def _capture_missing_home_poses(self) -> Tuple[List[str], List[str]]:
+        captured = []
+        missing = []
+        for ns, robot in sorted(self.robots.items()):
+            if robot.home_pose_xy is not None:
+                continue
+            if robot.last_pose_xy is not None:
+                robot.home_pose_xy = robot.last_pose_xy
+                captured.append(f"{ns}=({robot.last_pose_xy[0]:.2f},{robot.last_pose_xy[1]:.2f})")
+            else:
+                missing.append(ns)
+        return captured, missing
 
     def _planning_tick(self) -> None:
         self._prune_blacklist()
