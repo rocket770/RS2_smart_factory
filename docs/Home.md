@@ -255,6 +255,13 @@ Screenshot placeholders:
 - Re-source the ROS 2 and workspace setup files in every terminal.
 - Check that each robot was launched with a namespace matching `general_settings.yaml`.
 
+### Mapping freezes or robot poses become stale after connecting a TurtleBot
+
+- Check whether the TurtleBot has a different date/time from the operator workstation.
+- If the clocks differ, ROS timestamps will not line up. Mapping may look frozen, TF/extrapolation warnings may appear, robot poses may become stale, and that robot's data may stop contributing cleanly to `/map`.
+- Run `date -u` or `python3 tools/perception_mapping/check_time_sync.py` on the TurtleBot and workstation, then compare the UTC time.
+- Synchronize the clocks with NTP or manual time sync, then relaunch the robot bringup and mapping stack.
+
 ### Robot appears in the wrong place
 
 - Check the `x_pose` and `y_pose` launch arguments used on the robot.
