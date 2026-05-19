@@ -109,7 +109,23 @@ def generate_launch_description():
         parameters=[
             {
                 'port': lidar_port,
-                'frame_id': [namespace, '/base_scan']
+                'frame_id': [namespace, '/base_scan'],
+                'qos_overrides': {
+                    ('/', namespace, '/scan'): {
+                        'publisher': {
+                            'reliability': 'best_effort',
+                            'history': 'keep_last',
+                            'depth': 5,
+                        },
+                    },
+                    'scan': {
+                        'publisher': {
+                            'reliability': 'best_effort',
+                            'history': 'keep_last',
+                            'depth': 5,
+                        },
+                    },
+                },
             }
         ],
         output='screen'
