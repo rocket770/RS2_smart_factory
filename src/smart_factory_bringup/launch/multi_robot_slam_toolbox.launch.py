@@ -122,7 +122,7 @@ def generate_launch_description():
             'use_sim_time': use_sim_time,
             'autostart': True,
             'node_names': ['map_saver']
-        }]s
+        }]
     ))
 
     return ld
