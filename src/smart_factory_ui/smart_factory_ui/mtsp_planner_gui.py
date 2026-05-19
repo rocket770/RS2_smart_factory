@@ -686,6 +686,7 @@ import yaml
 from action_msgs.msg import GoalStatus
 from rclpy.action import ActionClient
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from rclpy.qos import (
     QoSProfile,
     ReliabilityPolicy,
@@ -809,9 +810,11 @@ class MtspPlannerGuiNode(Node):
         self.latest_result: Optional[MtspResult] = None
         self._last_ignored_result_reason: Optional[str] = None
         self.robot_positions: Dict[str, Tuple[float, float]] = {}
+        self.robot_poses: Dict[str, Tuple[float, float, float]] = {}
         self.robot_position_sources: Dict[str, str] = {}
         self.tf_buffer = Buffer()
         self.robot_namespaces, self.robot_namespace_warning = load_robot_namespaces()
+        self.initial_pose_publishers = {}
         self.save_map_client = self.create_client(SaveMap, "/map_saver/save_map")
         self.explorer_start_client = self.create_client(Trigger, "/multi_robot_explorer/start")
         self.explorer_stop_client = self.create_client(Trigger, "/multi_robot_explorer/stop")
@@ -880,6 +883,16 @@ class MtspPlannerGuiNode(Node):
                     tf_static_qos,
                 )
             )
+            self.initial_pose_publishers[ns] = self.create_publisher(
+                PoseWithCovarianceStamped,
+                f"/{ns}/initialpose",
+                10,
+            )
+
+    def set_use_sim_time(self, enabled: bool):
+        self.set_parameters([
+            Parameter("use_sim_time", value=bool(enabled)),
+        ])
 
     def _on_map(self, msg: OccupancyGrid):
         self.latest_map = msg
@@ -930,11 +943,23 @@ class MtspPlannerGuiNode(Node):
             float(msg.pose.pose.position.x),
             float(msg.pose.pose.position.y),
         )
+        self.robot_poses[namespace] = (
+            float(msg.pose.pose.position.x),
+            float(msg.pose.pose.position.y),
+            self._yaw_from_quaternion(msg.pose.pose.orientation),
+        )
         self.robot_position_sources[namespace] = "amcl_pose"
 
     def _on_tf(self, msg: TFMessage, is_static: bool, source_namespace: Optional[str] = None):
         for t in msg.transforms:
             transform = self._normalize_transform_for_buffer(t, source_namespace)
+            robot_name = self._robot_name_from_transform(transform)
+            if robot_name is not None:
+                self.robot_poses[robot_name] = (
+                    float(transform.transform.translation.x),
+                    float(transform.transform.translation.y),
+                    self._yaw_from_quaternion(transform.transform.rotation),
+                )
             try:
                 if is_static:
                     self.tf_buffer.set_transform_static(transform, "mtsp_planner_gui")
@@ -1006,6 +1031,26 @@ class MtspPlannerGuiNode(Node):
             if normalized and normalized not in candidates:
                 candidates.append(normalized)
         return candidates
+
+    def _robot_name_from_transform(self, transform: TransformStamped) -> Optional[str]:
+        child = transform.child_frame_id.lstrip("/")
+        frame = transform.header.frame_id.lstrip("/")
+
+        for ns in self.robot_namespaces:
+            if child.startswith(f"{ns}/") and child.endswith(("base_link", "base_footprint")):
+                return ns
+            if frame.startswith(f"{ns}/") and child.endswith(("base_link", "base_footprint")):
+                return ns
+
+        if child in ("base_link", "base_footprint"):
+            return None
+
+        return None
+
+    def _yaw_from_quaternion(self, q) -> float:
+        siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
+        cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+        return math.atan2(siny_cosp, cosy_cosp)
 
 
 # -----------------------------
@@ -1296,6 +1341,8 @@ class MainWindow(QMainWindow):
         self._execution_progress: Dict[str, int] = {}
         self._execution_goal_handles: Dict[str, object] = {}
         self._manual_goal_handles: Dict[str, object] = {}
+        self._active_nav_mode: Optional[str] = None
+        self._saved_slam_seed_poses: Dict[str, Tuple[str, float, float, float, float, float, float]] = {}
 
         self.setWindowTitle("MTSP Planner GUI")
         self.resize(1400, 900)
@@ -1348,6 +1395,7 @@ class MainWindow(QMainWindow):
         self._qt_timer = QTimer(self)
         self._qt_timer.timeout.connect(self._on_timer)
         self._qt_timer.start(100)
+        self._apply_gui_clock_mode(self.use_sim_time_btn.isChecked(), log_change=False)
         if self.ros_node.robot_namespace_warning:
             self.log(self.ros_node.robot_namespace_warning)
 
@@ -1389,6 +1437,10 @@ class MainWindow(QMainWindow):
         self.browse_map_btn.clicked.connect(self.on_browse_map_clicked)
         row2.addWidget(self.browse_map_btn)
         layout.addWidget(self.amcl_controls)
+
+        self.set_amcl_from_current_btn = QPushButton("Set AMCL Poses From Current")
+        self.set_amcl_from_current_btn.clicked.connect(self.on_set_amcl_from_current_clicked)
+        layout.addWidget(self.set_amcl_from_current_btn)
 
         row3 = QHBoxLayout()
         self.start_nav_btn = QPushButton("Start Nav Stack")
@@ -1608,6 +1660,7 @@ class MainWindow(QMainWindow):
         using_amcl = mode_text == "Load Existing Map (AMCL)"
         using_slam = not using_amcl
         self.amcl_controls.setVisible(using_amcl)
+        self.set_amcl_from_current_btn.setVisible(using_amcl)
         self.slam_controls.setVisible(using_slam)
         if using_amcl:
             self.nav_status_label.setText("AMCL mode selected. Choose a saved map YAML.")
@@ -1615,9 +1668,14 @@ class MainWindow(QMainWindow):
             self.nav_status_label.setText("SLAM mode selected. This will start SLAM, merge_map, and explorer.")
 
     def _on_use_sim_time_toggled(self, checked: bool):
+        self._apply_gui_clock_mode(checked)
+
+    def _apply_gui_clock_mode(self, checked: bool, log_change: bool = True):
+        self.ros_node.set_use_sim_time(checked)
         self._update_use_sim_time_button()
         mode_text = "simulation time" if checked else "real robot time"
-        self.log(f"use_sim_time set to {str(checked).lower()} ({mode_text}).")
+        if log_change:
+            self.log(f"use_sim_time set to {str(checked).lower()} ({mode_text}).")
 
     def _update_use_sim_time_button(self):
         enabled = self.use_sim_time_btn.isChecked()
@@ -1628,6 +1686,30 @@ class MainWindow(QMainWindow):
     def _use_sim_time_launch_arg(self) -> str:
         return f"use_sim_time:={'true' if self.use_sim_time_btn.isChecked() else 'false'}"
 
+    def _capture_slam_seed_poses(self):
+        captured: Dict[str, Tuple[str, float, float, float, float, float, float]] = {}
+        missing: List[str] = []
+        for ns in self.ros_node.robot_namespaces:
+            transform = self.ros_node._lookup_robot_pose_transform(ns)
+            if transform is None:
+                missing.append(ns)
+                continue
+            captured[ns] = (
+                self.ros_node._map_frame(),
+                float(transform.transform.translation.x),
+                float(transform.transform.translation.y),
+                float(transform.transform.rotation.x),
+                float(transform.transform.rotation.y),
+                float(transform.transform.rotation.z),
+                float(transform.transform.rotation.w),
+            )
+
+        if captured:
+            self._saved_slam_seed_poses.update(captured)
+            self.log("Saved SLAM map poses for AMCL handoff: " + ", ".join(sorted(captured.keys())))
+        if missing:
+            self.log("Could not save SLAM map pose for: " + ", ".join(missing))
+
     def on_browse_map_clicked(self):
         filename, _ = QFileDialog.getOpenFileName(
             self,
@@ -1637,6 +1719,80 @@ class MainWindow(QMainWindow):
         )
         if filename:
             self.map_path_input.setText(filename)
+
+    def on_set_amcl_from_current_clicked(self):
+        published = []
+        missing = []
+        used_saved_slam_pose = []
+
+        for ns in self.ros_node.robot_namespaces:
+            transform = self.ros_node._lookup_robot_pose_transform(ns)
+            msg = PoseWithCovarianceStamped()
+            msg.header.frame_id = self.ros_node._map_frame()
+
+            pose_source = "tf_lookup"
+            saved_pose = self._saved_slam_seed_poses.get(ns)
+            if saved_pose is not None:
+                (
+                    saved_frame,
+                    saved_x,
+                    saved_y,
+                    saved_qx,
+                    saved_qy,
+                    saved_qz,
+                    saved_qw,
+                ) = saved_pose
+                msg.header.stamp = self.ros_node.get_clock().now().to_msg()
+                msg.header.frame_id = saved_frame
+                msg.pose.pose.position.x = saved_x
+                msg.pose.pose.position.y = saved_y
+                msg.pose.pose.position.z = 0.0
+                msg.pose.pose.orientation.x = saved_qx
+                msg.pose.pose.orientation.y = saved_qy
+                msg.pose.pose.orientation.z = saved_qz
+                msg.pose.pose.orientation.w = saved_qw
+                pose_source = "saved_slam_pose"
+                used_saved_slam_pose.append(ns)
+            elif transform is not None:
+                msg.header.stamp = transform.header.stamp
+                msg.pose.pose.position.x = float(transform.transform.translation.x)
+                msg.pose.pose.position.y = float(transform.transform.translation.y)
+                msg.pose.pose.position.z = 0.0
+                msg.pose.pose.orientation = transform.transform.rotation
+            else:
+                pose = self.ros_node.robot_poses.get(ns)
+                if pose is None:
+                    missing.append(ns)
+                    continue
+                x, y, yaw = pose
+                msg.header.stamp = self.ros_node.get_clock().now().to_msg()
+                msg.pose.pose.position.x = x
+                msg.pose.pose.position.y = y
+                msg.pose.pose.position.z = 0.0
+                msg.pose.pose.orientation.z = math.sin(yaw / 2.0)
+                msg.pose.pose.orientation.w = math.cos(yaw / 2.0)
+                pose_source = "cached_pose"
+            msg.pose.covariance[0] = 0.25
+            msg.pose.covariance[7] = 0.25
+            msg.pose.covariance[35] = 0.0685
+
+            self.ros_node.initial_pose_publishers[ns].publish(msg)
+            published.append(ns)
+            self.log(
+                f"{ns}: published AMCL initial pose "
+                f"({msg.pose.pose.position.x:.2f}, {msg.pose.pose.position.y:.2f}) "
+                f"from {pose_source}"
+            )
+
+        if published:
+            self.nav_status_label.setText("Published AMCL pose estimates for: " + ", ".join(published))
+        else:
+            self.nav_status_label.setText("No live robot poses available for AMCL pose estimates.")
+
+        if missing:
+            self.log("No live pose available for: " + ", ".join(missing))
+        for ns in used_saved_slam_pose:
+            self._saved_slam_seed_poses.pop(ns, None)
 
     def on_save_map_clicked(self):
         if self.nav_mode_combo.currentText() != "Use SLAM + Explore":
@@ -1749,6 +1905,7 @@ class MainWindow(QMainWindow):
                 cmd,
                 preexec_fn=os.setsid,
             )
+            self._active_nav_mode = self.nav_mode_combo.currentText()
             self.nav_status_label.setText("Started: " + " ".join(cmd))
             self.log("Started nav stack: " + " ".join(cmd))
             if self.nav_mode_combo.currentText() == "Use SLAM + Explore":
@@ -1877,6 +2034,8 @@ class MainWindow(QMainWindow):
             return
 
         try:
+            if self._active_nav_mode == "Use SLAM + Explore":
+                self._capture_slam_seed_poses()
             os.killpg(os.getpgid(self.nav_process.pid), signal.SIGTERM)
             self.nav_status_label.setText("Stop signal sent to nav stack.")
             self.log("Sent stop signal to nav stack.")
@@ -1985,6 +2144,7 @@ class MainWindow(QMainWindow):
         self.nav_status_label.setText(f"Nav stack exited with code {code}.")
         self.log(f"Nav stack exited with code {code}.")
         self.nav_process = None
+        self._active_nav_mode = None
 
     def _refresh_solver_process_state(self):
         if self.solver_process is None:
