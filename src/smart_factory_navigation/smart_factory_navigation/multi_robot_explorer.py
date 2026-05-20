@@ -242,7 +242,7 @@ class MultiRobotExplorer(Node):
         self.declare_parameter('planning_period_sec', 1.0)
         self.declare_parameter('discovery_period_sec', 2.0)
         self.declare_parameter('reservation_radius_m', 1.5)
-        self.declare_parameter('frontier_min_cluster_size', 4)
+        self.declare_parameter('frontier_min_cluster_size', 16)
         self.declare_parameter('frontier_merge_radius_m', 0.75)
         self.declare_parameter('min_frontier_separation_m', 1.5)
         self.declare_parameter('goal_tolerance_m', 0.75)
