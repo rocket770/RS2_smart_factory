@@ -672,6 +672,7 @@
 import json
 import math
 import os
+import re
 import signal
 import subprocess
 import tempfile
@@ -721,6 +722,8 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QScrollArea,
+    QSizePolicy,
     QSpinBox,
     QSplitter,
     QTextEdit,
@@ -1378,6 +1381,10 @@ class MainWindow(QMainWindow):
         self.log_box.setPlaceholderText("Logs / actions / run status...")
         left_layout.addWidget(self.log_box, stretch=1)
 
+        left_scroll = QScrollArea()
+        left_scroll.setWidgetResizable(True)
+        left_scroll.setWidget(left)
+
 
         # Right panel
         right = QWidget()
@@ -1388,7 +1395,7 @@ class MainWindow(QMainWindow):
         self.result_label.setAlignment(Qt.AlignCenter)
         right_layout.addWidget(self.result_label)
 
-        splitter.addWidget(left)
+        splitter.addWidget(left_scroll)
         splitter.addWidget(right)
         splitter.setSizes([420, 980])
 
@@ -1481,6 +1488,8 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.slam_controls)
 
         self.nav_status_label = QLabel("Nav stack not launched from GUI.")
+        self.nav_status_label.setWordWrap(True)
+        self.nav_status_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         layout.addWidget(self.nav_status_label)
 
         self.on_nav_mode_changed(self.nav_mode_combo.currentText())
@@ -2161,6 +2170,12 @@ class MainWindow(QMainWindow):
         elif code == 0:
             self.log("MTSP solver exited cleanly, but no mtsp_best_solution was received.")
             self.result_label.setText("MTSP solver finished, but no solution was received.")
+            failure_details = self._read_solver_failure_details()
+            if failure_details:
+                self.log("Detected failing MTSP path checks:")
+                for line in failure_details:
+                    self.log(line)
+                self._append_summary_section("MTSP path failures", failure_details)
             solver_output = self._read_solver_log_tail()
             if solver_output:
                 self.log("MTSP solver output:")
@@ -2169,6 +2184,12 @@ class MainWindow(QMainWindow):
         else:
             self.log("MTSP solver failed before producing a valid result.")
             self.result_label.setText(f"MTSP solver failed with exit code {code}.")
+            failure_details = self._read_solver_failure_details()
+            if failure_details:
+                self.log("Detected failing MTSP path checks:")
+                for line in failure_details:
+                    self.log(line)
+                self._append_summary_section("MTSP path failures", failure_details)
             solver_output = self._read_solver_log_tail()
             if solver_output:
                 self.log("MTSP solver output:")
@@ -2198,6 +2219,19 @@ class MainWindow(QMainWindow):
 
         if self.solver_process is not None and self.solver_process.poll() is None:
             QMessageBox.information(self, "Solver Running", "The MTSP solver is already running.")
+            return
+
+        goal_validation_errors = self._validate_goal_points()
+        if goal_validation_errors:
+            self.log("MTSP run blocked by invalid goals:")
+            for line in goal_validation_errors:
+                self.log(line)
+            self._append_summary_section("Goal validation errors", goal_validation_errors)
+            QMessageBox.warning(
+                self,
+                "Invalid Goals",
+                "Some selected goals are outside free map space. Check the run summary for details.",
+            )
             return
 
         config = self.build_run_config(effective_robot_starts)
@@ -2423,6 +2457,119 @@ class MainWindow(QMainWindow):
             return "".join(lines[-max_lines:]).strip()
         except Exception as exc:
             return f"Unable to read solver log: {exc}"
+
+    def _append_summary_section(self, title: str, lines: List[str]):
+        existing = self.summary_box.toPlainText().rstrip()
+        section_lines = [f"# {title}"] + lines
+        if existing:
+            updated = existing + "\n\n" + "\n".join(section_lines)
+        else:
+            updated = "\n".join(section_lines)
+        self.summary_box.setPlainText(updated)
+
+    def _map_cell_for_point(self, point: WorldPoint) -> Optional[Tuple[int, int]]:
+        map_msg = self.ros_node.latest_map
+        if map_msg is None:
+            return None
+
+        resolution = map_msg.info.resolution
+        if resolution <= 0.0:
+            return None
+
+        origin_x = map_msg.info.origin.position.x
+        origin_y = map_msg.info.origin.position.y
+        width = int(map_msg.info.width)
+        height = int(map_msg.info.height)
+
+        mx = int(math.floor((point.x - origin_x) / resolution))
+        my = int(math.floor((point.y - origin_y) / resolution))
+        if mx < 0 or my < 0 or mx >= width or my >= height:
+            return None
+        return mx, my
+
+    def _occupancy_value_at_point(self, point: WorldPoint) -> Optional[int]:
+        map_msg = self.ros_node.latest_map
+        if map_msg is None:
+            return None
+
+        cell = self._map_cell_for_point(point)
+        if cell is None:
+            return None
+
+        mx, my = cell
+        index = my * int(map_msg.info.width) + mx
+        if index < 0 or index >= len(map_msg.data):
+            return None
+        return int(map_msg.data[index])
+
+    def _validate_goal_points(self) -> List[str]:
+        map_msg = self.ros_node.latest_map
+        if map_msg is None:
+            return ["No /map has been received yet, so goals could not be validated."]
+
+        issues: List[str] = []
+        for index, point in enumerate(self.map_canvas.goal_points):
+            occupancy = self._occupancy_value_at_point(point)
+            if occupancy is None:
+                issues.append(
+                    f"G{index} ({point.x:.2f}, {point.y:.2f}) is outside the current map bounds."
+                )
+                continue
+            if occupancy < 0:
+                issues.append(
+                    f"G{index} ({point.x:.2f}, {point.y:.2f}) is in unknown space (occupancy {occupancy})."
+                )
+                continue
+            if occupancy > 50:
+                issues.append(
+                    f"G{index} ({point.x:.2f}, {point.y:.2f}) is on an occupied cell (occupancy {occupancy})."
+                )
+        return issues
+
+    def _read_solver_failure_details(self, max_items: int = 10) -> List[str]:
+        if not self._solver_log_path or not os.path.exists(self._solver_log_path):
+            return []
+
+        pair_pattern = re.compile(
+            r"(Planner failed from|Planner rejected path request from|Timed out waiting for path result from|Planner returned null result from) "
+            r"\(([-0-9.]+), ([-0-9.]+)\) to \(([-0-9.]+), ([-0-9.]+)\)"
+        )
+        goal_only_pattern = re.compile(
+            r"Planning algorithm .* failed to generate a valid path to \(([-0-9.]+), ([-0-9.]+)\)"
+        )
+
+        details: List[str] = []
+        seen = set()
+
+        try:
+            with open(self._solver_log_path, "r", encoding="utf-8", errors="replace") as handle:
+                for raw_line in handle:
+                    line = raw_line.strip()
+                    pair_match = pair_pattern.search(line)
+                    if pair_match:
+                        status = pair_match.group(1).replace("Planner ", "").replace(" from", "")
+                        detail = (
+                            f"{status}: start=({pair_match.group(2)}, {pair_match.group(3)}) "
+                            f"-> goal=({pair_match.group(4)}, {pair_match.group(5)})"
+                        )
+                        if detail not in seen:
+                            seen.add(detail)
+                            details.append(detail)
+                        continue
+
+                    goal_only_match = goal_only_pattern.search(line)
+                    if goal_only_match:
+                        detail = (
+                            f"Nav2 could not generate a path to "
+                            f"({goal_only_match.group(1)}, {goal_only_match.group(2)})"
+                        )
+                        if detail not in seen:
+                            seen.add(detail)
+                            details.append(detail)
+        except Exception as exc:
+            return [f"Unable to parse solver log for failing paths: {exc}"]
+
+        return details[:max_items]
 
     def _get_nav_client(self, namespace: str) -> ActionClient:
         client = self._nav_action_clients.get(namespace)
