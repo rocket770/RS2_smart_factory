@@ -4,7 +4,7 @@ slam_toolbox:
     # The LDS-01 is short range and comparatively noisy near its limits, so
     # we keep scan updates responsive while constraining matching to the useful
     # part of the scan.
-    map_update_interval: 0.5
+    map_update_interval: 1.0
     minimum_time_interval: 0.10
     transform_publish_period: 0.05
     resolution: 0.05

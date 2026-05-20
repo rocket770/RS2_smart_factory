@@ -6,6 +6,7 @@ merge_map:
     input_reliability: "best_effort"
     output_reliability: "reliable"
     scan_period_sec: 1.0
+    publish_period_sec: 1.0
     merged_frame_id: "map"
     use_tf_transforms: true
     unknown_value: -1

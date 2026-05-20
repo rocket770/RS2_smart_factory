@@ -81,6 +81,7 @@ class RobotHandle:
     assigned_goal: Optional[AssignedGoal] = None
     last_pose_xy: Optional[Tuple[float, float]] = None
     last_pose_stamp: Optional[Time] = None
+    global_costmap: Optional[OccupancyGrid] = None
     available: bool = False
     failures: int = 0
     home_pose_xy: Optional[Tuple[float, float]] = None
@@ -248,6 +249,7 @@ class MultiRobotExplorer(Node):
         self.declare_parameter('goal_tolerance_m', 0.75)
         self.declare_parameter('min_goal_distance_m', 1.0)
         self.declare_parameter('min_goal_distance_floor_m', 0.20)
+        self.declare_parameter('global_costmap_goal_margin_m', 0.55)
         self.declare_parameter('goal_cooldown_sec', 15.0)
         self.declare_parameter('robot_stale_timeout_sec', 5.0)
         self.declare_parameter('assignment_timeout_sec', 30.0)
@@ -274,6 +276,7 @@ class MultiRobotExplorer(Node):
         self.goal_tolerance_m = float(self.get_parameter('goal_tolerance_m').value)
         self.min_goal_distance_m = float(self.get_parameter('min_goal_distance_m').value)
         self.min_goal_distance_floor_m = float(self.get_parameter('min_goal_distance_floor_m').value)
+        self.global_costmap_goal_margin_m = float(self.get_parameter('global_costmap_goal_margin_m').value)
         self.goal_cooldown_sec = float(self.get_parameter('goal_cooldown_sec').value)
         self.robot_stale_timeout_sec = float(self.get_parameter('robot_stale_timeout_sec').value)
         self.assignment_timeout_sec = float(self.get_parameter('assignment_timeout_sec').value)
@@ -290,6 +293,7 @@ class MultiRobotExplorer(Node):
         self.map_msg: Optional[OccupancyGrid] = None
         self.robot_tf_stores: Dict[str, RobotTfStore] = {}
         self.robots: Dict[str, RobotHandle] = {}
+        self.global_costmap_subs: Dict[str, object] = {}
         self.blacklist: List[BlacklistEntry] = []
         self.next_frontier_id = 1
 
@@ -419,6 +423,11 @@ class MultiRobotExplorer(Node):
     def _map_callback(self, msg: OccupancyGrid) -> None:
         self.map_msg = msg
 
+    def _global_costmap_callback(self, namespace: str, msg: OccupancyGrid) -> None:
+        robot = self.robots.get(namespace)
+        if robot is not None:
+            robot.global_costmap = msg
+
     def _discovery_tick(self) -> None:
         namespaces = self._discover_robot_namespaces()
         for ns in namespaces:
@@ -429,6 +438,14 @@ class MultiRobotExplorer(Node):
                 action_client = ActionClient(self, NavigateToPose, f'/{ns}/navigate_to_pose')
                 self.robots[ns] = RobotHandle(namespace=ns, action_client=action_client)
                 self.get_logger().info(f'Created NavigateToPose action client for /{ns}/navigate_to_pose')
+            if ns not in self.global_costmap_subs:
+                self.global_costmap_subs[ns] = self.create_subscription(
+                    OccupancyGrid,
+                    f'/{ns}/global_costmap/costmap',
+                    lambda msg, robot_ns=ns: self._global_costmap_callback(robot_ns, msg),
+                    best_effort_qos(depth=1, transient_local=True),
+                )
+                self.get_logger().info(f'Subscribed to /{ns}/global_costmap/costmap for goal bounds checks')
 
         now = self.get_clock().now()
         stale_namespaces = []
@@ -844,6 +861,8 @@ class MultiRobotExplorer(Node):
         min_reject = max(self.min_goal_distance_floor_m, min(self.goal_tolerance_m, self.min_goal_distance_floor_m))
         for cell in frontier.cells:
             goal_xy = self._cell_to_world(self.map_msg, cell)
+            if not self._goal_supported_by_robot_costmap(robot, goal_xy):
+                continue
             dist = self._distance_xy(robot.last_pose_xy, goal_xy)
             if dist <= self.goal_tolerance_m:
                 continue
@@ -858,6 +877,28 @@ class MultiRobotExplorer(Node):
         if dist < min_reject:
             return None
         return goal_xy, dist
+
+    def _goal_supported_by_robot_costmap(self, robot: RobotHandle, goal_xy: Tuple[float, float]) -> bool:
+        if robot.global_costmap is None:
+            return False
+        return self._point_inside_grid(robot.global_costmap, goal_xy, self.global_costmap_goal_margin_m)
+
+    @staticmethod
+    def _point_inside_grid(map_msg: OccupancyGrid, point_xy: Tuple[float, float], margin_m: float = 0.0) -> bool:
+        resolution = map_msg.info.resolution
+        width_m = map_msg.info.width * resolution
+        height_m = map_msg.info.height * resolution
+        if resolution <= 0.0 or width_m <= 0.0 or height_m <= 0.0:
+            return False
+
+        margin = max(0.0, min(margin_m, width_m * 0.45, height_m * 0.45))
+        x, y = point_xy
+        ox = map_msg.info.origin.position.x
+        oy = map_msg.info.origin.position.y
+        return (
+            ox + margin <= x < ox + width_m - margin and
+            oy + margin <= y < oy + height_m - margin
+        )
 
     def _build_candidate_for_robot_frontier(self, robot: RobotHandle, frontier: Frontier,
                                             reserved_points: List[Tuple[float, float]]) -> Optional[FrontierAssignmentCandidate]:

@@ -224,6 +224,7 @@ class MergeMapNode(Node):
         self.declare_parameter("input_reliability", "best_effort")
         self.declare_parameter("output_reliability", "reliable")
         self.declare_parameter("scan_period_sec", 2.0)
+        self.declare_parameter("publish_period_sec", 1.0)
         self.declare_parameter("merged_frame_id", "merge_map")
         self.declare_parameter("use_tf_transforms", True)
         self.declare_parameter("unknown_value", -1)
@@ -247,6 +248,10 @@ class MergeMapNode(Node):
             ReliabilityPolicy.RELIABLE,
         )
         self.scan_period_sec = float(self.get_parameter("scan_period_sec").value)
+        self.publish_period_sec = max(
+            0.1,
+            float(self.get_parameter("publish_period_sec").value),
+        )
         self.merged_frame_id = self.get_parameter("merged_frame_id").value
         self.use_tf_transforms = bool(self.get_parameter("use_tf_transforms").value)
         self.unknown_value = int(self.get_parameter("unknown_value").value)
@@ -285,6 +290,7 @@ class MergeMapNode(Node):
         self.subscriptions_by_topic: Dict[str, object] = {}
         self.latest_maps: Dict[str, OccupancyGrid] = {}
         self._tf_fallback_warned_topics = set()
+        self._pending_publish = False
 
         self.get_logger().info("Calling initial scan manually")
         self.scan_for_map_topics()
@@ -293,13 +299,18 @@ class MergeMapNode(Node):
             self.scan_period_sec,
             self.scan_for_map_topics,
         )
+        self.publish_timer = self.create_timer(
+            self.publish_period_sec,
+            self.publish_merged_map,
+        )
 
         self.get_logger().info(
             f"merge_map started. Watching topics matching: {self.map_topic_regex}"
         )
         self.get_logger().info(
             f"Publishing merged map on: {self.publish_topic} "
-            f"with {self.output_reliability.name.lower()} reliability"
+            f"with {self.output_reliability.name.lower()} reliability "
+            f"at up to {1.0 / self.publish_period_sec:.2f} Hz"
         )
 
     def get_topic_offset(self, topic_name: str) -> Tuple[float, float, float]:
@@ -377,14 +388,14 @@ class MergeMapNode(Node):
             )
             self.subscriptions_by_topic[topic_name] = subscription
 
-        self.publish_merged_map()
+        self._pending_publish = True
 
     def map_callback(self, msg: OccupancyGrid, topic_name: str) -> None:
         self.latest_maps[topic_name] = msg
-        self.publish_merged_map()
+        self._pending_publish = True
 
     def publish_merged_map(self) -> None:
-        if not self.latest_maps:
+        if not self.latest_maps or not self._pending_publish:
             return
 
         ordered_topics = sorted(self.latest_maps.keys())
@@ -410,6 +421,7 @@ class MergeMapNode(Node):
 
         merged.header.stamp = self.get_clock().now().to_msg()
         self.publisher.publish(merged)
+        self._pending_publish = False
 
 
 def main(args=None):
