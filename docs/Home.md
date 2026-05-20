@@ -225,6 +225,10 @@ There is no fixed robot count in the wiki workflow. The practical limit depends 
 - In existing-map mode, Nav2 localizes each robot against the provided map.
 - The GUI can be used to create tasks and send routes.
 
+Short startup warnings from RViz, Nav2, or DDS can appear while nodes discover each other and lifecycle nodes activate. These can usually be ignored if the warnings stop, `/map` is being received, TF is connected, and Nav2 action servers become available.
+
+Recent SLAM-mode real-robot tuning keeps merged `/map` reliable for Nav2 Humble compatibility, throttles `merge_map` output with `publish_period_sec`, slows SLAM map updates to reduce network load, and makes the explorer check each goal against the target robot's current global costmap before sending it to Nav2.
+
 Screenshot placeholders:
 
 - TODO: Add Gazebo simulation screenshot.

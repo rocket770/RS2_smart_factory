@@ -12,9 +12,10 @@ Discovery loop:
 
 1. It scans active ROS topics and extracts namespaces matching `robot_namespace_regex`, for example `tb1` or `tb2`.
 2. For each discovered namespace, it creates a TF store for that robot and a Nav2 action client for `/<robot>/navigate_to_pose`.
-3. The TF store listens to `/tf`, `/tf_static`
-4. It tries to resolve each robot pose in the shared map frame using `base_frame`
-5. If a robot has a recent pose and its `NavigateToPose` action server is ready, it is marked available. If pose data becomes stale for longer than `robot_stale_timeout_sec`, the robot is made unavailable and any assignment is released.
+3. It subscribes to each robot's `/<robot>/global_costmap/costmap` so assigned goals can be checked against the costmap Nav2 is currently using.
+4. The TF store listens to `/tf`, `/tf_static`, and namespaced TF topics.
+5. It tries to resolve each robot pose in the shared map frame using `base_frame`.
+6. If a robot has a recent pose and its `NavigateToPose` action server is ready, it is marked available. If pose data becomes stale for longer than `robot_stale_timeout_sec`, the robot is made unavailable and any assignment is released.
 
 Planning loop:
 
@@ -24,7 +25,7 @@ Planning loop:
 4. Clusters smaller than `frontier_min_cluster_size` are ignored.
 5. Nearby clusters are merged using `frontier_merge_radius_m`.
 6. Frontiers too close to active goals or recently blacklisted goals are filtered out.
-7. Idle robots are paired with candidate frontiers. For each robot/frontier pair, the node picks a usable goal cell from that frontier and computes a score.
+7. Idle robots are paired with candidate frontiers. For each robot/frontier pair, the node picks a usable goal cell from that frontier, checks that it is inside that robot's current global costmap with `global_costmap_goal_margin_m`, and computes a score.
 8. Lower scores are preferred. The score mainly uses distance, then subtracts a size bonus for larger frontiers and applies a home-bias penalty so robots tend to explore areas closer to their own starting region.
 9. The global assignment step chooses robot/frontier pairs while preventing two robots from taking the same frontier or goals closer than `min_frontier_separation_m`.
 10. Selected goals are sent as `NavigateToPose` goals in the shared `map` frame.
@@ -67,6 +68,7 @@ ros2 service call /multi_robot_explorer/start std_srvs/srv/Trigger {}
 | `/map` | Input | Shared occupancy grid. |
 | `/tf`, `/tf_static` | Input | Shared TF tree. |
 | `/<robot>/tf`, `/<robot>/tf_static` | Input | Namespaced TF tree. |
+| `/<robot>/global_costmap/costmap` | Input | Per-robot Nav2 global costmap used for goal bounds checks. |
 | `/<robot>/navigate_to_pose` | Output action | Frontier goal sent to Nav2. |
 | `~/markers` | Output | Optional RViz debug markers. |
 
@@ -95,6 +97,7 @@ ros2 service call /multi_robot_explorer/start std_srvs/srv/Trigger {}
 | `frontier_min_cluster_size` | `8` | Ignores small frontier clusters. |
 | `min_frontier_separation_m` | `1.5` | Separates chosen frontiers. |
 | `goal_tolerance_m` | `0.75` | Distance threshold for considering a goal reached. |
+| `global_costmap_goal_margin_m` | `0.55` | Keeps assigned goals away from the edge of each robot's current Nav2 global costmap. |
 | `robot_stale_timeout_sec` | `5.0` | Marks robots unavailable when pose data is stale. |
 | `assignment_timeout_sec` | `30.0` | Releases slow assignments. |
 | `blacklist_timeout_sec` | `20.0` | Avoids recently failed goals. |
