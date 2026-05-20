@@ -774,12 +774,19 @@ class MtspResult:
     cost: float
 
 
+@dataclass
+class RobotHomePose:
+    x: float
+    y: float
+    yaw: float
+
+
 # -----------------------------
 # ROS node
 # -----------------------------
 
 
-def load_robot_namespaces() -> Tuple[List[str], Optional[str]]:
+def load_robot_settings() -> Tuple[List[str], Dict[str, RobotHomePose], Optional[str]]:
     for candidate in GENERAL_SETTINGS_CANDIDATES:
         if not os.path.exists(candidate):
             continue
@@ -791,18 +798,35 @@ def load_robot_namespaces() -> Tuple[List[str], Optional[str]]:
 
         robots = settings.get("robots", [])
         namespaces: List[str] = []
+        home_poses: Dict[str, RobotHomePose] = {}
         for robot in robots:
             if not isinstance(robot, dict):
                 continue
             name = str(robot.get("name", "")).strip()
             if name and name not in namespaces:
                 namespaces.append(name)
+                try:
+                    home_poses[name] = RobotHomePose(
+                        x=float(robot.get("initial_pose_x", robot.get("x_pose", 0.0))),
+                        y=float(robot.get("initial_pose_y", robot.get("y_pose", 0.0))),
+                        yaw=float(robot.get("initial_pose_yaw", robot.get("yaw", 0.0))),
+                    )
+                except (TypeError, ValueError):
+                    pass
 
         if namespaces:
-            return namespaces, None
-        return list(DEFAULT_ROBOT_NAMESPACES), f"No robot names found in {candidate}; using defaults."
+            return namespaces, home_poses, None
+        return (
+            list(DEFAULT_ROBOT_NAMESPACES),
+            {},
+            f"No robot names found in {candidate}; using defaults.",
+        )
 
-    return list(DEFAULT_ROBOT_NAMESPACES), "general_settings.yaml not found; using default robot namespaces."
+    return (
+        list(DEFAULT_ROBOT_NAMESPACES),
+        {},
+        "general_settings.yaml not found; using default robot namespaces.",
+    )
 
 class MtspPlannerGuiNode(Node):
     def __init__(self):
@@ -816,7 +840,7 @@ class MtspPlannerGuiNode(Node):
         self.robot_poses: Dict[str, Tuple[float, float, float]] = {}
         self.robot_position_sources: Dict[str, str] = {}
         self.tf_buffer = Buffer()
-        self.robot_namespaces, self.robot_namespace_warning = load_robot_namespaces()
+        self.robot_namespaces, self.robot_home_poses, self.robot_namespace_warning = load_robot_settings()
         self.initial_pose_publishers = {}
         self.save_map_client = self.create_client(SaveMap, "/map_saver/save_map")
         self.explorer_start_client = self.create_client(Trigger, "/multi_robot_explorer/start")
@@ -1464,9 +1488,13 @@ class MainWindow(QMainWindow):
         self.pause_btn.clicked.connect(self.on_pause_clicked)
         row_controls.addWidget(self.pause_btn)
 
-        self.resume_btn = QPushButton("Resume")
+        self.resume_btn = QPushButton("Play/Resume")
         self.resume_btn.clicked.connect(self.on_resume_clicked)
         row_controls.addWidget(self.resume_btn)
+
+        self.home_btn = QPushButton("Home")
+        self.home_btn.clicked.connect(self.on_home_clicked)
+        row_controls.addWidget(self.home_btn)
 
         self.estop_btn = QPushButton("Emergency Stop")
         self.estop_btn.clicked.connect(self.on_emergency_stop_clicked)
@@ -1840,15 +1868,15 @@ class MainWindow(QMainWindow):
             self.log(f"Save map response: result={resp.result}")
             self.nav_status_label.setText(f"Requested map save to {map_url}")
             if getattr(resp, "result", False):
-                self._request_explorer_return_home()
+                self._request_explorer_return_home("Map saved return-home")
         except Exception as exc:
             QMessageBox.critical(self, "Save Map", f"Failed to save map: {exc}")
             self.log(f"Failed to save map: {exc}")
 
-    def _request_explorer_return_home(self):
+    def _request_explorer_return_home(self, context: str = "Return-home"):
         if not self.ros_node.explorer_return_home_client.wait_for_service(timeout_sec=2.0):
-            self.log("Map saved, but /multi_robot_explorer/return_home is not available.")
-            self.nav_status_label.setText("Map saved. Explorer return-home unavailable.")
+            self.log(f"{context}: /multi_robot_explorer/return_home is not available.")
+            self.nav_status_label.setText(f"{context} unavailable.")
             return
 
         future = self.ros_node.explorer_return_home_client.call_async(Trigger.Request())
@@ -1858,17 +1886,73 @@ class MainWindow(QMainWindow):
             QApplication.processEvents()
 
         if not future.done():
-            self.log("Timed out waiting for explorer return-home response.")
-            self.nav_status_label.setText("Map saved, but return-home timed out.")
+            self.log(f"{context}: timed out waiting for explorer return-home response.")
+            self.nav_status_label.setText(f"{context} timed out.")
             return
 
         try:
             resp = future.result()
             self.log(f"Explorer return-home response: success={resp.success}; {resp.message}")
-            self.nav_status_label.setText("Map saved. Explorer return-home requested.")
+            self.nav_status_label.setText(f"{context} requested.")
         except Exception as exc:
             self.log(f"Failed to request explorer return-home: {exc}")
-            self.nav_status_label.setText("Map saved, but return-home request failed.")
+            self.nav_status_label.setText(f"{context} request failed.")
+
+    def on_home_clicked(self):
+        self.log("Manual home requested.")
+        if self.ros_node.explorer_return_home_client.service_is_ready():
+            self._request_explorer_return_home("Manual return-home")
+            return
+
+        self._send_robots_to_configured_home()
+
+    def _send_robots_to_configured_home(self):
+        self._cancel_manual_goals()
+
+        sent = []
+        missing = []
+        unavailable = []
+
+        for namespace in self.ros_node.robot_namespaces:
+            home_pose = self.ros_node.robot_home_poses.get(namespace)
+            if home_pose is None:
+                missing.append(namespace)
+                continue
+
+            client = self._get_nav_client(namespace)
+            if not client.wait_for_server(timeout_sec=1.0):
+                unavailable.append(namespace)
+                continue
+
+            goal_msg = NavigateToPose.Goal()
+            goal_msg.pose = self._build_pose_stamped(home_pose.x, home_pose.y, home_pose.yaw)
+
+            self.log(
+                f"{namespace}: sending home target -> "
+                f"({home_pose.x:.2f}, {home_pose.y:.2f}, yaw={home_pose.yaw:.2f})"
+            )
+            future = client.send_goal_async(goal_msg)
+            future.add_done_callback(
+                lambda fut, ns=namespace, hx=home_pose.x, hy=home_pose.y: self._on_manual_goal_response(
+                    ns,
+                    WorldPoint(hx, hy),
+                    fut,
+                )
+            )
+            sent.append(namespace)
+
+        parts = []
+        if sent:
+            parts.append("Home requested for: " + ", ".join(sent))
+        if unavailable:
+            parts.append("Nav2 unavailable for: " + ", ".join(unavailable))
+        if missing:
+            parts.append("No configured home pose for: " + ", ".join(missing))
+
+        if parts:
+            self.nav_status_label.setText(" | ".join(parts))
+        else:
+            self.nav_status_label.setText("Manual return-home unavailable.")
 
     def _nav_launch_command(self) -> List[str]:
         mode_text = self.nav_mode_combo.currentText()
@@ -1906,7 +1990,7 @@ class MainWindow(QMainWindow):
             if self.nav_mode_combo.currentText() == "Use SLAM + Explore":
                 self.ros_node.latest_map = None
                 self.map_canvas.clear_map("Waiting for SLAM to publish a merged /map...")
-                self._schedule_explorer_start()
+                self._clear_pending_explorer_start()
             else:
                 self._clear_pending_explorer_start()
 
@@ -1918,7 +2002,7 @@ class MainWindow(QMainWindow):
             self.nav_status_label.setText("Started: " + " ".join(cmd))
             self.log("Started nav stack: " + " ".join(cmd))
             if self.nav_mode_combo.currentText() == "Use SLAM + Explore":
-                self.nav_status_label.setText("SLAM stack launching. Waiting for explorer service...")
+                self.nav_status_label.setText("SLAM stack launching. Exploration is paused until Play/Resume is pressed.")
         except Exception as exc:
             QMessageBox.critical(self, "Launch Failed", f"Failed to launch nav stack: {exc}")
             self.log(f"Failed to launch nav stack: {exc}")
@@ -2669,14 +2753,15 @@ class MainWindow(QMainWindow):
             lambda fut, ns=namespace, goal_idx=goal_index: self._on_goal_response(ns, goal_idx, fut)
         )
 
-    def _build_pose_stamped(self, x: float, y: float) -> PoseStamped:
+    def _build_pose_stamped(self, x: float, y: float, yaw: float = 0.0) -> PoseStamped:
         pose = PoseStamped()
         pose.header.frame_id = "map"
         pose.header.stamp = self.ros_node.get_clock().now().to_msg()
         pose.pose.position.x = float(x)
         pose.pose.position.y = float(y)
         pose.pose.position.z = 0.0
-        pose.pose.orientation.w = 1.0
+        pose.pose.orientation.z = math.sin(float(yaw) / 2.0)
+        pose.pose.orientation.w = math.cos(float(yaw) / 2.0)
         return pose
 
     def _on_goal_response(self, namespace: str, goal_index: int, future):
