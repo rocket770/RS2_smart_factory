@@ -4,6 +4,105 @@
 
 RS2 Smart Factory is a ROS 2 Humble multi-robot TurtleBot3 system for smart factory mapping, navigation, task planning, and GUI-driven task execution. It supports both Gazebo simulation and real TurtleBot3 robots by running each robot under a matching namespace.
 
+## Full system flow
+
+The current primary operator path is the MTSP GUI. It launches the navigation stack, displays the shared map, collects operator goals, runs the MTSP solver, and executes the resulting robot routes through Nav2.
+
+```mermaid
+flowchart LR
+    Operator["Operator"]
+
+    subgraph RobotLayer["Robots or Gazebo"]
+        RobotSources["Robot sensors and TF"]
+        RobotMotion["Robot motion"]
+    end
+
+    subgraph MappingLayer["Perception and mapping"]
+        Slam["SLAM mode: slam_toolbox"]
+        Merge["SLAM mode: merge_map"]
+        Explorer["SLAM mode: explorer"]
+        Saver["SLAM mode: map_saver"]
+        MapServer["AMCL mode: map_server"]
+        Amcl["AMCL mode: amcl"]
+        SharedMap["Shared map topic: /map"]
+        SavedMaps["Saved map files"]
+    end
+
+    subgraph NavLayer["Nav2 per robot"]
+        NavInputs["Map, scan, and TF"]
+        Planner["ComputePathToPose"]
+        Navigator["NavigateToPose"]
+        Costmap["Global costmap"]
+        CmdVel["Velocity output"]
+    end
+
+    subgraph UiLayer["Operator UI and MTSP"]
+        Gui["MTSP GUI"]
+        Solver["MTSP solver"]
+        Results["mtsp_best_solution"]
+    end
+
+    Operator --> Gui
+
+    RobotSources -- "scan, odom, TF" --> Slam
+    RobotSources -- "scan, odom, TF" --> Amcl
+    RobotSources -- "scan, odom, TF" --> NavInputs
+
+    Slam --> Merge
+    Merge --> SharedMap
+    SavedMaps --> MapServer
+    MapServer --> SharedMap
+    SharedMap --> Amcl
+    Amcl -- "localization TF" --> NavInputs
+
+    SharedMap --> NavInputs
+    NavInputs --> Planner
+    NavInputs --> Navigator
+    NavInputs --> Costmap
+    Navigator --> CmdVel
+    CmdVel --> RobotMotion
+
+    Gui -- "launch mode" --> Slam
+    Gui -- "launch mode" --> MapServer
+    Gui -- "launch Nav2" --> NavInputs
+    SharedMap --> Gui
+    RobotSources -- "robot poses from TF" --> Gui
+
+    Gui -- "goals and starts" --> Solver
+    Solver -. "path-cost requests" .-> Planner
+    Solver --> Results
+    Results --> Gui
+
+    Gui -- "manual and route goals" --> Navigator
+    Gui -. "initial poses" .-> Amcl
+    Gui -. "save request" .-> Saver
+    Gui -. "explorer controls" .-> Explorer
+
+    SharedMap --> Explorer
+    Costmap --> Explorer
+    Explorer -. "frontier goals" .-> Navigator
+
+    SharedMap --> Saver
+    Saver -. "writes" .-> SavedMaps
+```
+
+### Main subsystem interactions
+
+| Interaction | What passes between subsystems |
+| --- | --- |
+| Robots/Gazebo -> Perception and mapping | Namespaced scan, odometry, and TF feed SLAM Toolbox in SLAM mode or AMCL in AMCL mode. |
+| Perception and mapping -> Nav2 | The shared `/map` and localization TF let Nav2 plan and execute in the `map` frame. |
+| Robots/Gazebo -> Nav2 | Namespaced scan, odometry, and TF feed Nav2 costmaps and localization-dependent navigation. |
+| Nav2 -> Robots/Gazebo | Nav2 outputs velocity commands for the active robot namespace. |
+| MTSP GUI -> Perception and mapping | The GUI chooses SLAM or AMCL launch mode, can send AMCL initial poses, can save maps, and can start/stop/resume exploration. |
+| Perception and mapping -> MTSP GUI | The GUI displays `/map` and uses TF-derived robot poses from the running mapping/localization stack. |
+| MTSP GUI -> MTSP solver | The GUI sends robot starts, operator-selected goals, solver settings, and the Nav2 planner action name through a generated solver parameter file. |
+| MTSP solver -> Nav2 | With the `nav2` distance backend, the solver requests planned path costs through `ComputePathToPose`. |
+| MTSP solver -> MTSP GUI | The solver publishes `mtsp_best_solution`, which the GUI renders as routes and progress. |
+| MTSP GUI -> Nav2 | Manual move targets and MTSP execution goals are sent through `NavigateToPose`. |
+| SLAM explorer -> Nav2 | In SLAM mode, frontier exploration sends `NavigateToPose` goals and checks each robot's global costmap. |
+| Map saver/server <-> Saved map files | SLAM mode writes saved map files; AMCL mode loads saved map files through the map server. |
+
 ## Key features / subsystem list
 
 - [Perception and Mapping](Perception-and-Mapping): per-robot SLAM, merged maps, frontier exploration, saved maps, and localization against an existing factory map.
