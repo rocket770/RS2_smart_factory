@@ -69,11 +69,18 @@ Clone and build the project workspace:
 cd ~
 git clone https://github.com/rocket770/RS2_smart_factory.git smart_factory_ws
 cd ~/smart_factory_ws
+git checkout main
 source /opt/ros/humble/setup.bash
 rosdep update
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --symlink-install
 source install/setup.bash
+```
+
+The recommended branch for simulation is `main`. For real robots, `real-robot-test-nick` is optimized for physical TurtleBot3 runs:
+
+```bash
+git checkout real-robot-test-nick
 ```
 
 Install the namespaced robot launch file and URDF assets on each real TurtleBot3:
@@ -229,12 +236,23 @@ Short startup warnings from RViz, Nav2, or DDS can appear while nodes discover e
 
 Recent SLAM-mode real-robot tuning keeps merged `/map` reliable for Nav2 Humble compatibility, throttles `merge_map` output with `publish_period_sec`, slows SLAM map updates to reduce network load, and makes the explorer check each goal against the target robot's current global costmap before sending it to Nav2.
 
-Screenshot placeholders:
+Screenshots:
 
-- TODO: Add Gazebo simulation screenshot.
-- TODO: Add RViz multi-robot navigation screenshot.
-- TODO: Add GUI screenshot.
-- TODO: Add real TurtleBot3 hardware setup photo.
+Gazebo simulation (`gazebo_sim.png`):
+
+![Gazebo simulation](images/gazebo_sim.png)
+
+RViz multi-robot navigation (`rviz_multi_robot.png`):
+
+![RViz multi-robot navigation](images/rviz_multi_robot.png)
+
+GUI (`GUI.png`):
+
+![GUI](images/GUI.png)
+
+Real TurtleBot3 hardware setup (`real_robot_setup.jpg`):
+
+![Real TurtleBot3 hardware setup](images/real_robot_setup.jpg)
 
 ## Subsystem specifics
 
