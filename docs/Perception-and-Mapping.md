@@ -147,6 +147,8 @@ The practical rule is simple: launch arguments on real robots and entries in `ge
 
 The active robot list comes from `smart_factory_bringup/params/general_settings.yaml`. In this workspace the active namespaces are `tb1` and `tb2`, and every `<robot_ns>/...` item below is repeated for each active robot. Nav2 is shown only as the external navigation dependency that consumes `/map` and accepts exploration goals.
 
+For a lower-level node, topic, service, and action diagram, see [Perception and Mapping Detailed Flow](Perception-and-Mapping-Detailed-Flow).
+
 ```mermaid
 flowchart TB
     RobotData["Robot data: &lt;robot_ns&gt;/scan + odom/base TF"]
