@@ -130,8 +130,8 @@ In SLAM mode, each robot owns a local map frame such as `tb1/map`; static transf
 
 | Run type | SLAM mode | AMCL mode |
 | --- | --- | --- |
-| Simulation | Gazebo spawns robots at `general_settings.yaml` poses. When `use_slam:=true` and `use_sim_time:=true`, `multi_robot_nav2_bringup.launch.py` publishes a zero `map -> <robot>/map` static transform for each robot. | Gazebo poses and AMCL initial poses come from `general_settings.yaml`; AMCL connects each namespaced robot into the shared `map` frame. |
-| Real robots | `namespaced_robot.launch.py` publishes `map -> <namespace>/map` using the robot's `x_pose`, `y_pose`, and `z_pose` launch args. This anchors each robot's local SLAM map relative to the shared map frame. | AMCL initial poses come from `general_settings.yaml`; the shared map comes from map server, and AMCL publishes each robot's localization transform. |
+| Simulation | Gazebo spawns robots at `general_settings.yaml` poses. When `use_slam:=true` and `use_sim_time:=true`, `multi_robot_nav2_bringup.launch.py` publishes a zero `map -> <robot_ns>/map` static transform for each robot. | Gazebo poses and AMCL initial poses come from `general_settings.yaml`; AMCL connects each namespaced robot into the shared `map` frame. |
+| Real robots | `namespaced_robot.launch.py` publishes `map -> <robot_ns>/map` using the robot's `x_pose`, `y_pose`, and `z_pose` launch args. This anchors each robot's local SLAM map relative to the shared map frame. | AMCL initial poses come from `general_settings.yaml`; the shared map comes from map server, and AMCL publishes each robot's localization transform. |
 
 SLAM TF tree (`slam_frames.png`):
 
@@ -143,6 +143,67 @@ AMCL TF tree (`amcl_frames.png`):
 
 The practical rule is simple: launch arguments on real robots and entries in `general_settings.yaml` must describe the same robot layout.
 
+## Node and topic flow
+
+The active robot list comes from `smart_factory_bringup/params/general_settings.yaml`. In this workspace the active namespaces are `tb1` and `tb2`, and every `<robot_ns>/...` item below is repeated for each active robot. Nav2 is shown only as the external navigation dependency that consumes `/map` and accepts exploration goals.
+
+```mermaid
+flowchart TB
+    RobotData["Robot data: &lt;robot_ns&gt;/scan + odom/base TF"]
+    SharedMap["Shared factory map: /map"]
+    Nav2["External Nav2 stack per robot: uses /map and robot data"]
+
+    subgraph SlamMode["SLAM mode: build or expand map"]
+        Slam["&lt;robot_ns&gt;/slam_toolbox"]
+        LocalMap["&lt;robot_ns&gt;/map"]
+        Anchor["map -> &lt;robot_ns&gt;/map TF anchor"]
+        Merge["/merge_map"]
+        Explorer["/multi_robot_explorer"]
+        Saver["/map_saver"]
+        SavedMap["Saved map files: YAML + image"]
+    end
+
+    subgraph AmclMode["AMCL mode: localize on saved map"]
+        MapFiles["Saved map files: YAML + image"]
+        MapServer["/map_server"]
+        Amcl["&lt;robot_ns&gt;/amcl"]
+    end
+
+    RobotData -- "scan + TF" --> Slam
+    Slam -- "per-robot occupancy grid" --> LocalMap
+    LocalMap -- "&lt;robot_ns&gt;/map" --> Merge
+    Anchor -. "places local maps in shared frame" .-> Merge
+    Merge -- "/map" --> SharedMap
+
+    SharedMap --> Explorer
+    Explorer -- "frontier goal to &lt;robot_ns&gt;/navigate_to_pose" --> Nav2
+    Nav2 -- "goal validity from &lt;robot_ns&gt;/global_costmap/costmap" --> Explorer
+    SharedMap --> Saver
+    Saver -. "/map_saver/save_map" .-> SavedMap
+
+    MapFiles --> MapServer
+    MapServer -- "/map" --> SharedMap
+    SharedMap --> Amcl
+    RobotData -- "scan + odom/base TF" --> Amcl
+    Amcl -- "localization TF + &lt;robot_ns&gt;/particle_cloud" --> Nav2
+    SharedMap --> Nav2
+    RobotData --> Nav2
+```
+
+### Functional nodes
+
+| Node | Mode | Important interface |
+| --- | --- | --- |
+| `<robot_ns>/slam_toolbox` | SLAM | Consumes `<robot_ns>/scan` and robot TF; publishes `<robot_ns>/map`. |
+| `/merge_map` | SLAM | Combines `<robot_ns>/map` topics into the shared `/map`. |
+| `/multi_robot_explorer` | SLAM | Reads `/map`; sends `<robot_ns>/navigate_to_pose` goals; checks `<robot_ns>/global_costmap/costmap`. |
+| `/map_saver` | SLAM | Saves the shared `/map` through `/map_saver/save_map`. |
+| `/map_server` | AMCL | Loads a saved map and publishes `/map`. |
+| `<robot_ns>/amcl` | AMCL | Consumes `/map`, `<robot_ns>/scan`, and robot TF; publishes localization TF and `<robot_ns>/particle_cloud`. |
+| `<robot_ns>/Nav2 stack` | Both | External to this subsystem; consumes `/map`, provides global costmap and `NavigateToPose` action for exploration. |
+
+The essential handoff is: SLAM mode produces `/map` from live per-robot maps; AMCL mode produces `/map` from saved map files. Everything else in this subsystem either uses that shared `/map` to save, explore, or localize.
+
 ## Perception and mapping troubleshooting
 
 These checks are specific to the mapping stack: namespaced scans and odometry, per-robot SLAM maps, the merged `/map`, map saving, and explorer robot discovery. Nav2 costmap or planner failures can appear nearby in the logs, but start here only when the symptom affects mapping, map merge, saved maps, or frontier discovery.
@@ -153,7 +214,7 @@ These checks are specific to the mapping stack: namespaced scans and odometry, p
 | A TurtleBot is connected, but mapping looks frozen, robot poses jump, or logs say data is from the future/past. | The TurtleBot system date/time differs from the operator workstation. ROS 2 messages, TF, scans, and SLAM updates are timestamped with that bad clock. | SLAM Toolbox can reject scans, TF lookups can fail, explorer pose data can become stale, and the merged `/map` may stop updating for that robot. | Run `date -u` or `python3 tools/perception_mapping/check_time_sync.py` on the TurtleBot and workstation, then compare the UTC time. | Fix the TurtleBot date/time with NTP or manual time sync, confirm both machines show the same UTC time, then relaunch the robot bringup and mapping stack. | ![TF old data](images/tf_old_data.png) |
 | SLAM maps or explorer robot poses look stale, and logs mention old data, future data, extrapolation, or message filter drops. | Robot and workstation clocks are not synchronized. This is common when a TurtleBot date is wrong. | SLAM and explorer receive TF or scan messages with timestamps that do not line up. | `python3 tools/perception_mapping/check_time_sync.py` | Enable NTP/time sync on every machine and relaunch mapping after clocks agree. | ![Message dropped](images/message_dropped.png) |
 | `/map` appears late, costmaps take a long time to fill, or map updates pause during real-robot runs. | ROS 2 traffic is delayed or dropped on the network. | Per-robot maps may arrive late; map merge and explorer startup can lag. | `python3 tools/perception_mapping/check_ros_network_logs.py` | Wait for discovery to settle, keep robots on the same reliable network, reduce extra RViz/topic load, and restart only if topics never recover. | ![No map loaded](images/no_map_Loaded.png) |
-| Merged map is rotated, doubled, or badly misaligned even though each robot's local map looks usable. | Real robots did not start with the same heading. `namespaced_robot.launch.py` anchors `map -> <namespace>/map` with x/y/z only, so yaw is effectively assumed to match. | The shared `/map` is wrong even if `/tb1/map` and `/tb2/map` individually look reasonable. | Check physical start angles before launch and compare `general_settings.yaml` poses. | Start all robots facing the same direction and keep `namespace`, `x_pose`, and `y_pose` consistent with `general_settings.yaml`. | ![Map rotated](images/map_rotated.png) |
+| Merged map is rotated, doubled, or badly misaligned even though each robot's local map looks usable. | Real robots did not start with the same heading. `namespaced_robot.launch.py` anchors `map -> <robot_ns>/map` with x/y/z only, so yaw is effectively assumed to match. | The shared `/map` is wrong even if `/tb1/map` and `/tb2/map` individually look reasonable. | Check physical start angles before launch and compare `general_settings.yaml` poses. | Start all robots facing the same direction and keep `namespace`, `x_pose`, and `y_pose` consistent with `general_settings.yaml`. | ![Map rotated](images/map_rotated.png) |
 | A robot map exists but is not included in `/map`. | The map topic name does not match `map_topic_regex`, currently `^/tb\d+/map$`. | `merge_map` ignores that robot's occupancy grid. | `ros2 topic list | sort | rg '^/tb[0-9]+/map$|^/map$'` | Use `tb1`, `tb2`, etc. namespaces or update `map_topic_regex` intentionally. | ![No map loaded](images/no_map_Loaded.png) |
 | Logs say a queue is full, but `/tbN/map` and `/map` continue updating. | A subscriber is falling behind briefly during high topic load. | Usually none; it is normally safe to ignore if mapping continues. | Check that `/map` still publishes: `ros2 topic echo /map --once --qos-durability transient_local` | Ignore occasional messages. If constant, reduce RViz displays or other high-rate subscribers. | ![Message dropped](images/message_dropped.png) |
 | Map saving returns `false` or produces no files. | The output directory does not exist, the path is not writable, or no merged `/map` has arrived yet. | Saved YAML/image is missing or invalid for later AMCL. | `python3 tools/perception_mapping/check_map_file.py /home/nick/maps/factory_merged.yaml` after saving | Create the directory, use an absolute writable path prefix, confirm `/map_saver/save_map` exists, and wait for `/map` before saving. | ![Map failed](images/map_failed.png) |
