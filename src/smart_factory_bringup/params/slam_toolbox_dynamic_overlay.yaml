@@ -15,8 +15,8 @@ slam_toolbox:
  
     # Lower than slam_toolbox defaults so the map updates during slow manual
     # driving, but not so low that every tiny wheel encoder jitter is fused.
-    minimum_travel_distance: 0.04
-    minimum_travel_heading: 0.04
+    minimum_travel_distance: 0.03
+    minimum_travel_heading: 0.03
  
     use_scan_matching: true
     use_scan_barycenter: true

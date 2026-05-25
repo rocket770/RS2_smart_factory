@@ -81,7 +81,7 @@ def generate_launch_description():
                                     'publisher': {'reliability': 'best_effort'},
                                 },
                             },
-                            # 'transform_timeout': 0.5,
+                            'transform_timeout': 0.5,
                             # 'tf_buffer_duration': 30.0,
                         }
                     ],

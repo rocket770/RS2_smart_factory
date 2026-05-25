@@ -15,7 +15,7 @@ def generate_launch_description():
         DeclareLaunchArgument('planning_period_sec', default_value='1.0'),
         DeclareLaunchArgument('discovery_period_sec', default_value='2.0'),
         DeclareLaunchArgument('reservation_radius_m', default_value='1.5'),
-        DeclareLaunchArgument('frontier_min_cluster_size', default_value='16'),
+        DeclareLaunchArgument('frontier_min_cluster_size', default_value='6'),
         DeclareLaunchArgument('min_frontier_separation_m', default_value='1.5'),
         DeclareLaunchArgument('goal_tolerance_m', default_value='0.75'),
         DeclareLaunchArgument('robot_stale_timeout_sec', default_value='5.0'),
